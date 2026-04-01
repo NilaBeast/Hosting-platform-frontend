@@ -5,24 +5,48 @@ const OAuthSuccess = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const login = async () => {
+      const params = new URLSearchParams(window.location.search);
 
-    const token = params.get("token");
-    const githubToken = params.get("github_token");
+      const token = params.get("token");
+      const githubToken = params.get("github_token");
 
-    if (token) {
-      localStorage.setItem("token", token);
-    }
+      if (token) {
+        localStorage.setItem("token", token);
+      }
 
-    if (githubToken) {
-      localStorage.setItem("github_token", githubToken);
-    }
+      if (githubToken) {
+        localStorage.setItem("github_token", githubToken);
+      }
 
-    // Clean URL
-    window.history.replaceState({}, document.title, "/");
+      try {
+        // Fetch logged in user profile
+        const res = await fetch("http://localhost:5000/api/user/profile", {
+          headers: {
+            Authorization: token,
+          },
+        });
 
-    // Redirect to dashboard
-    navigate("/");
+        const user = await res.json();
+
+        localStorage.setItem("user", JSON.stringify(user));
+
+        // Clean URL
+        window.history.replaceState({}, document.title, "/");
+
+        // Redirect based on role
+        if (user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      } catch (err) {
+        console.log("OAuth error:", err);
+        navigate("/login");
+      }
+    };
+
+    login();
   }, []);
 
   return (

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
 import Plans from "./pages/Plans";
@@ -9,120 +9,103 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Settings from "./pages/Settings";
 import OAuthSuccess from "./pages/OAuthSuccess";
+import AdminDashboard from "./pages/AdminDashboard";
 
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import { Toaster } from "react-hot-toast";
 
-function Protected({ children }) {
-  const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/register" />;
+/* ===============================
+   AUTH CHECK
+================================ */
+function getUser() {
+  try {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
 }
 
-function Public({ children }) {
+/* =============================== */
+function Protected() {
   const token = localStorage.getItem("token");
-  return token ? <Navigate to="/" /> : children;
+  return token ? <Outlet /> : <Navigate to="/login" />;
 }
 
-function Layout({ children }) {
-  const location = useLocation();
+/* =============================== */
+function AdminProtected() {
+  const token = localStorage.getItem("token");
+  const user = getUser();
 
-  const hideLayout =
-    location.pathname === "/login" ||
-    location.pathname === "/register";
+  if (!token) return <Navigate to="/login" />;
+  if (!user || user.role !== "admin") return <Navigate to="/" />;
 
+  return <Outlet />;
+}
+
+/* =============================== */
+function Public() {
+  const token = localStorage.getItem("token");
+  const user = getUser();
+
+  if (token && user) {
+    if (user.role === "admin") return <Navigate to="/admin" />;
+    return <Navigate to="/" />;
+  }
+
+  return <Outlet />;
+}
+
+/* ===============================
+   LAYOUT
+================================ */
+function Layout() {
   return (
     <div className="flex">
-      {!hideLayout && <Sidebar />}
+      <Sidebar />
       <div className="flex-1">
-        {!hideLayout && <Navbar />}
-        {children}
+        <Navbar />
+        <Outlet />
       </div>
     </div>
   );
 }
 
+/* ===============================
+   APP
+================================ */
 function App() {
   return (
     <BrowserRouter>
       <Toaster />
-      <Layout>
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              <Public>
-                <Login />
-              </Public>
-            }
-          />
 
-          <Route
-            path="/register"
-            element={
-              <Public>
-                <Register />
-              </Public>
-            }
-          />
+      <Routes>
+        {/* Public Routes */}
+        <Route element={<Public />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
 
-          <Route path="/oauth-success" element={<OAuthSuccess />} />
+        <Route path="/oauth-success" element={<OAuthSuccess />} />
 
-          <Route
-            path="/"
-            element={
-              <Protected>
-                <Dashboard />
-              </Protected>
-            }
-          />
+        {/* Admin Routes */}
+        <Route element={<AdminProtected />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
 
-          <Route
-            path="/plans"
-            element={
-              <Protected>
-                <Plans />
-              </Protected>
-            }
-          />
-
-          <Route
-            path="/hosting"
-            element={
-              <Protected>
-                <Hosting />
-              </Protected>
-            }
-          />
-
-          <Route
-            path="/domains"
-            element={
-              <Protected>
-                <Domains />
-              </Protected>
-            }
-          />
-
-          <Route
-            path="/deploy"
-            element={
-              <Protected>
-                <Deploy />
-              </Protected>
-            }
-          />
-
-          <Route
-            path="/settings"
-            element={
-              <Protected>
-                <Settings />
-              </Protected>
-            }
-          />
-        </Routes>
-      </Layout>
+        {/* User Protected Routes with Layout */}
+        <Route element={<Protected />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/hosting" element={<Hosting />} />
+            <Route path="/domains" element={<Domains />} />
+            <Route path="/deploy" element={<Deploy />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }

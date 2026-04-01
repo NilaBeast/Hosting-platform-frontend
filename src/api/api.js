@@ -64,9 +64,7 @@ export const UserAPI = {
 ================================ */
 export const PlanAPI = {
   getPlans: () => API.get("api/plans"),
-  createPlan: (data) => API.post("api/plans", data),
-  updatePlan: (id, data) => API.put(`api/plans/${id}`, data),
-  deletePlan: (id) => API.delete(`api/plans/${id}`),
+  syncWHM: () => API.post("api/plans/sync-whm"),
 };
 
 /* ===============================
@@ -77,6 +75,7 @@ export const HostingAPI = {
   getHostingAccounts: () => API.get("api/hosting"),
   suspendHosting: (id) => API.post(`api/hosting/suspend/${id}`),
   deleteHosting: (id) => API.delete(`api/hosting/${id}`),
+  loginToCpanel: () => API.get("api/hosting/login"),
 };
 
 /* ===============================
@@ -86,6 +85,7 @@ export const DomainAPI = {
   addDomain: (data) => API.post("api/domain/add", data),
   getDomains: () => API.get("api/domain"),
   deleteDomain: (id) => API.delete(`api/domain/${id}`),
+  selectDomain: (data) => API.post("api/domain/select", data),
 };
 
 /* ===============================

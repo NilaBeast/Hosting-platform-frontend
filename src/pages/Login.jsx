@@ -16,10 +16,28 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
 
+  /* Safe get user */
+  const getStoredUser = () => {
+    try {
+      const user = localStorage.getItem("user");
+      return user ? JSON.parse(user) : null;
+    } catch {
+      return null;
+    }
+  };
+
   /* Redirect if already logged in */
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) navigate("/");
+    const user = getStoredUser();
+
+    if (token && user) {
+      if (user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    }
   }, []);
 
   /* Email Login */
@@ -30,9 +48,15 @@ const Login = () => {
       const res = await AuthAPI.login(form);
 
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
       toast.success("Login successful");
 
-      navigate("/");
+      if (res.data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       toast.error(err.response?.data || "Login failed");
     } finally {
@@ -49,23 +73,27 @@ const Login = () => {
       const res = await AuthAPI.firebaseGoogle(token);
 
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
       toast.success("Login Successful");
 
-      navigate("/");
+      if (res.data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       toast.error("Google login failed");
     }
   };
 
-  /* Add this function */
-const githubLogin = () => {
-  window.location.href = "http://localhost:5000/api/auth/github";
-};
+  /* GitHub Login */
+  const githubLogin = () => {
+    window.location.href = "http://localhost:5000/api/auth/github";
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#020617] to-[#0f172a]">
-      
-      {/* Background Glow */}
       <div className="absolute w-96 h-96 bg-blue-500 opacity-20 blur-3xl rounded-full top-10 left-10"></div>
       <div className="absolute w-96 h-96 bg-purple-500 opacity-20 blur-3xl rounded-full bottom-10 right-10"></div>
 
@@ -83,12 +111,11 @@ const githubLogin = () => {
           Login to your hosting dashboard
         </p>
 
-        {/* Email Login */}
         <form onSubmit={handleLogin} className="space-y-4">
           <input
             type="email"
             placeholder="Email Address"
-            className="w-full p-3 rounded-lg bg-[#020617] border border-gray-700 focus:border-blue-500 outline-none"
+            className="w-full p-3 rounded-lg bg-[#020617] border border-gray-700"
             onChange={(e) =>
               setForm({ ...form, email: e.target.value })
             }
@@ -97,7 +124,7 @@ const githubLogin = () => {
           <input
             type="password"
             placeholder="Password"
-            className="w-full p-3 rounded-lg bg-[#020617] border border-gray-700 focus:border-blue-500 outline-none"
+            className="w-full p-3 rounded-lg bg-[#020617] border border-gray-700"
             onChange={(e) =>
               setForm({ ...form, password: e.target.value })
             }
@@ -113,14 +140,12 @@ const githubLogin = () => {
           </motion.button>
         </form>
 
-        {/* Divider */}
         <div className="flex items-center gap-3 my-6">
           <div className="flex-1 h-[1px] bg-gray-700"></div>
           <span className="text-gray-400 text-sm">OR</span>
           <div className="flex-1 h-[1px] bg-gray-700"></div>
         </div>
 
-        {/* Google Login */}
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
@@ -131,15 +156,14 @@ const githubLogin = () => {
         </motion.button>
 
         <motion.button
-  whileHover={{ scale: 1.03 }}
-  whileTap={{ scale: 0.97 }}
-  onClick={githubLogin}
-  className="w-full bg-gray-800 py-3 rounded-lg font-semibold mt-3"
->
-  Continue with GitHub
-</motion.button>
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={githubLogin}
+          className="w-full bg-gray-800 py-3 rounded-lg font-semibold mt-3"
+        >
+          Continue with GitHub
+        </motion.button>
 
-        {/* Register Link */}
         <p className="text-center text-gray-400 mt-6">
           Don’t have an account?{" "}
           <a href="/register" className="text-blue-400">

@@ -4,8 +4,11 @@ import { AuthAPI } from "../api/api";
 import toast from "react-hot-toast";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../firebase/firebase";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -22,9 +25,15 @@ const Register = () => {
       const res = await AuthAPI.register(form);
 
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
       toast.success("Account created");
 
-      window.location.href = "/";
+      if (res.data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       toast.error(err.response?.data || "Registration failed");
     } finally {
@@ -40,14 +49,20 @@ const Register = () => {
       const res = await AuthAPI.firebaseGoogle(token);
 
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
       toast.success("Registered with Google");
-      window.location.href = "/";
+
+      if (res.data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       toast.error("Google login failed");
     }
   };
 
-  /* GitHub Register/Login */
   const githubRegister = () => {
     window.location.href = "http://localhost:5000/api/auth/github";
   };
@@ -63,9 +78,9 @@ const Register = () => {
         transition={{ duration: 0.6 }}
         className="relative bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-2xl shadow-2xl w-[420px]"
       >
-        <motion.h1 className="text-3xl font-bold mb-2 text-center">
+        <h1 className="text-3xl font-bold mb-2 text-center">
           Create Account
-        </motion.h1>
+        </h1>
 
         <p className="text-gray-400 text-center mb-6">
           Start hosting your websites today
