@@ -9,10 +9,15 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Settings from "./pages/Settings";
 import OAuthSuccess from "./pages/OAuthSuccess";
-import AdminDashboard from "./pages/AdminDashboard";
+import AdminProfile from "./admin/pages/AdminProfile";
 
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
+
+import AdminLayout from "./admin/components/AdminLayout";
+import AdminDashboard from "./admin/pages/AdminDashboard";
+import AdminUsers from "./admin/pages/AdminUsers";
+
 import { Toaster } from "react-hot-toast";
 
 /* ===============================
@@ -27,13 +32,11 @@ function getUser() {
   }
 }
 
-/* =============================== */
 function Protected() {
   const token = localStorage.getItem("token");
   return token ? <Outlet /> : <Navigate to="/login" />;
 }
 
-/* =============================== */
 function AdminProtected() {
   const token = localStorage.getItem("token");
   const user = getUser();
@@ -44,7 +47,6 @@ function AdminProtected() {
   return <Outlet />;
 }
 
-/* =============================== */
 function Public() {
   const token = localStorage.getItem("token");
   const user = getUser();
@@ -58,7 +60,7 @@ function Public() {
 }
 
 /* ===============================
-   LAYOUT
+   USER LAYOUT
 ================================ */
 function Layout() {
   return (
@@ -81,7 +83,7 @@ function App() {
       <Toaster />
 
       <Routes>
-        {/* Public Routes */}
+        {/* Public */}
         <Route element={<Public />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -91,10 +93,14 @@ function App() {
 
         {/* Admin Routes */}
         <Route element={<AdminProtected />}>
-          <Route path="/admin" element={<AdminDashboard />} />
-        </Route>
+  <Route element={<AdminLayout />}>
+    <Route path="/admin" element={<AdminDashboard />} />
+    <Route path="/admin/users" element={<AdminUsers />} />
+    <Route path="/admin/profile" element={<AdminProfile />} />
+  </Route>
+</Route>
 
-        {/* User Protected Routes with Layout */}
+        {/* User Routes */}
         <Route element={<Protected />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
@@ -103,6 +109,7 @@ function App() {
             <Route path="/domains" element={<Domains />} />
             <Route path="/deploy" element={<Deploy />} />
             <Route path="/settings" element={<Settings />} />
+            
           </Route>
         </Route>
       </Routes>

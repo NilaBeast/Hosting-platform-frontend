@@ -60,6 +60,28 @@ export const UserAPI = {
 };
 
 /* ===============================
+   ADMIN APIs
+================================ */
+export const AdminAPI = {
+  getDashboard: () => API.get("api/admin/dashboard"),
+
+  getUsers: () => API.get("api/admin/users"),
+  addUser: (data) => API.post("api/admin/users", data),
+  deleteUser: (id) => API.delete(`api/admin/users/${id}`),
+
+  getOrders: () => API.get("api/admin/orders"),
+  createOrder: (data) => API.post("api/admin/orders", data),
+
+  getTransactions: () => API.get("api/admin/transactions"),
+  getInvoices: () => API.get("api/admin/invoices"),
+
+  getTickets: () => API.get("api/admin/tickets"),
+  createTicket: (data) => API.post("api/admin/tickets", data),
+
+  getServerStats: () => API.get("api/admin/server-stats"),
+};
+
+/* ===============================
    PLANS APIs
 ================================ */
 export const PlanAPI = {
@@ -111,6 +133,14 @@ export const GithubAPI = {
 export const SettingsAPI = {
   changePassword: (data) => API.post("api/settings/change-password", data),
   updateSettings: (data) => API.put("api/settings", data),
+};
+
+export const ProfileAPI = {
+  getProfile: () => API.get("api/profile"),
+  updateProfile: (data) =>
+    API.put("api/profile", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 };
 
 export default API;
