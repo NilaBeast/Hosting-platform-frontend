@@ -68,9 +68,9 @@ export const AdminAPI = {
   getUsers: () => API.get("api/admin/users"),
   addUser: (data) => API.post("api/admin/users", data),
   deleteUser: (id) => API.delete(`api/admin/users/${id}`),
+  updateUser: (id, data) => API.put(`api/admin/users/${id}`, data),
 
-  getOrders: () => API.get("api/admin/orders"),
-  createOrder: (data) => API.post("api/admin/orders", data),
+  
 
   getTransactions: () => API.get("api/admin/transactions"),
   getInvoices: () => API.get("api/admin/invoices"),
@@ -81,6 +81,10 @@ export const AdminAPI = {
   getServerStats: () => API.get("api/admin/server-stats"),
 };
 
+export const OrderAPI = {
+  createOrder: (data) => API.post("api/orders", data),
+  getOrders: () => API.get("api/orders"),
+};
 /* ===============================
    PLANS APIs
 ================================ */

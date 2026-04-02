@@ -89,7 +89,8 @@ const Login = () => {
 
   /* GitHub Login */
   const githubLogin = () => {
-    window.location.href = "http://localhost:5000/api/auth/github";
+    window.location.href =
+  "http://localhost:5000/api/auth/github-login";
   };
 
   return (

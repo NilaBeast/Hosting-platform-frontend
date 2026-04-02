@@ -17,7 +17,7 @@ import Navbar from "./components/Navbar";
 import AdminLayout from "./admin/components/AdminLayout";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import AdminUsers from "./admin/pages/AdminUsers";
-
+import AdminOrders from "./admin/pages/AdminOrders";
 import { Toaster } from "react-hot-toast";
 
 /* ===============================
@@ -96,7 +96,10 @@ function App() {
   <Route element={<AdminLayout />}>
     <Route path="/admin" element={<AdminDashboard />} />
     <Route path="/admin/users" element={<AdminUsers />} />
+    <Route path="/admin/add-user" element={<AdminUsers />} />
     <Route path="/admin/profile" element={<AdminProfile />} />
+    <Route path="/admin/orders" element={<AdminOrders />} />
+    <Route path="/admin/new-order" element={<AdminOrders />} />
   </Route>
 </Route>
 
