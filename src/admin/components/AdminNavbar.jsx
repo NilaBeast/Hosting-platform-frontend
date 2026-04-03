@@ -4,13 +4,17 @@ import API from "../../api/api";
 
 const AdminNavbar = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState({});
+  const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    API.get("api/profile").then((res) => {
-      setUser(res.data);
-    });
+    API.get("api/profile")
+      .then((res) => {
+        setUser(res.data);
+      })
+      .catch(() => {
+        navigate("/login");
+      });
   }, []);
 
   const logout = () => {
@@ -22,7 +26,6 @@ const AdminNavbar = () => {
 
   return (
     <div className="bg-[#020617] border-b border-gray-800 p-4 flex justify-end items-center gap-6">
-      {/* Settings */}
       <button
         onClick={() => navigate("/admin/settings")}
         className="hover:text-blue-400"
@@ -38,12 +41,12 @@ const AdminNavbar = () => {
         >
           <img
             src={
-              user.avatar ||
+              user?.avatar ||
               "https://cdn-icons-png.flaticon.com/512/149/149071.png"
             }
             className="w-9 h-9 rounded-full"
           />
-          <span>{user.name}</span>
+          <span>{user?.name || "Admin"}</span>
         </div>
 
         {open && (

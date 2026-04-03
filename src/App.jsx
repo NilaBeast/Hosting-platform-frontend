@@ -11,6 +11,7 @@ import Settings from "./pages/Settings";
 import OAuthSuccess from "./pages/OAuthSuccess";
 import AdminProfile from "./admin/pages/AdminProfile";
 
+
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 
@@ -18,6 +19,7 @@ import AdminLayout from "./admin/components/AdminLayout";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import AdminUsers from "./admin/pages/AdminUsers";
 import AdminOrders from "./admin/pages/AdminOrders";
+import AdminBilling from "./admin/pages/AdminBilling";
 import { Toaster } from "react-hot-toast";
 
 /* ===============================
@@ -100,6 +102,8 @@ function App() {
     <Route path="/admin/profile" element={<AdminProfile />} />
     <Route path="/admin/orders" element={<AdminOrders />} />
     <Route path="/admin/new-order" element={<AdminOrders />} />
+    <Route path="/admin/billing" element={<AdminBilling />} />
+    <Route path="/admin/invoices" element={<AdminBilling />} />
   </Route>
 </Route>
 

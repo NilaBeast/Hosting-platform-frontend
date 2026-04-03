@@ -85,6 +85,13 @@ export const OrderAPI = {
   createOrder: (data) => API.post("api/orders", data),
   getOrders: () => API.get("api/orders"),
 };
+
+/*================PAYMENT API===============*/
+export const PaymentAPI = {
+  createOrder: (data) => API.post("api/payment/create-order", data),
+  verifyPayment: (data) => API.post("api/payment/verify", data),
+  getMyOrders: () => API.get("api/payment/my-orders"),
+};
 /* ===============================
    PLANS APIs
 ================================ */

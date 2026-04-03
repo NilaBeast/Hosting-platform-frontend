@@ -48,11 +48,13 @@ const Deploy = () => {
       const status = await GithubAPI.getStatus();
       if (status.data.connected) {
         setGithubConnected(true);
+
         const repoRes = await GithubAPI.getRepos();
         setRepos(repoRes.data);
       }
     } catch (err) {
       console.log(err);
+      toast.error("Error loading deploy page");
     }
   };
 

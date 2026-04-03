@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { OrderAPI, AdminAPI, PlanAPI } from "../../api/api";
+import { OrderAPI, AdminAPI, PlanAPI, PaymentAPI } from "../../api/api";
 import toast from "react-hot-toast";
 
 const AdminOrders = () => {
@@ -38,14 +38,51 @@ const AdminOrders = () => {
         return toast.error("All fields required");
       }
 
-      await OrderAPI.createOrder({
+      const res = await OrderAPI.createOrder({
         user_id: userId,
         plan_id: planId,
         domain,
       });
 
-      toast.success("Order created & hosting account created");
-      setDomain("");
+      const sessionId = res.data.payment_session_id;
+      const orderId = res.data.order_id;
+
+      const cashfree = window.Cashfree({
+        mode: "sandbox",
+      });
+
+      cashfree
+        .checkout({
+          paymentSessionId: sessionId,
+          redirectTarget: "_modal",
+        })
+        .then(async () => {
+          let attempts = 0;
+          let success = false;
+
+          while (attempts < 5 && !success) {
+            const verify = await PaymentAPI.verifyPayment({ orderId });
+
+            if (verify.data.success) {
+              toast.success("Payment Successful");
+
+              setTimeout(() => {
+                toast.success("Account Created Successfully");
+              }, 1500);
+
+              loadOrders();
+              success = true;
+              break;
+            }
+
+            attempts++;
+            await new Promise((r) => setTimeout(r, 2000));
+          }
+
+          if (!success) {
+            toast.error("Payment Verification Failed");
+          }
+        });
     } catch {
       toast.error("Order creation failed");
     }
@@ -57,7 +94,6 @@ const AdminOrders = () => {
         {isNewOrder ? "Create New Order" : "All Orders"}
       </h1>
 
-      {/* NEW ORDER FORM */}
       {isNewOrder && (
         <div className="bg-[#0f172a] p-6 rounded-xl w-96">
           <select
@@ -95,12 +131,11 @@ const AdminOrders = () => {
             onClick={createOrder}
             className="bg-blue-600 px-4 py-2 rounded w-full"
           >
-            Create Order
+            Create Order & Pay
           </button>
         </div>
       )}
 
-      {/* ALL ORDERS TABLE */}
       {!isNewOrder && (
         <table className="w-full bg-[#0f172a] rounded-lg">
           <thead>
