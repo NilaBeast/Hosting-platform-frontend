@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { OrderAPI, AdminAPI, PlanAPI, PaymentAPI } from "../../api/api";
+import { AdminAPI, PlanAPI, AdminOrderAPI, PaymentAPI } from "../../api/api";
 import toast from "react-hot-toast";
+import { useLocation } from "react-router-dom";
 
 const AdminOrders = () => {
   const location = useLocation();
-  const isNewOrder = location.pathname === "/admin/new-order";
+
+  // 🔥 Detect route
+  const isNewOrderPage = location.pathname === "/admin/new-order";
 
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
@@ -16,7 +18,7 @@ const AdminOrders = () => {
   const [domain, setDomain] = useState("");
 
   const loadOrders = () => {
-    OrderAPI.getOrders().then((res) => setOrders(res.data));
+    AdminOrderAPI.getOrders().then((res) => setOrders(res.data));
   };
 
   const loadFormData = () => {
@@ -25,20 +27,20 @@ const AdminOrders = () => {
   };
 
   useEffect(() => {
-    if (isNewOrder) {
-      loadFormData();
-    } else {
-      loadOrders();
-    }
+    loadOrders();
+    if (isNewOrderPage) loadFormData();
   }, [location.pathname]);
 
+  /* ===============================
+     CREATE ORDER
+  ================================= */
   const createOrder = async () => {
     try {
       if (!userId || !planId || !domain) {
         return toast.error("All fields required");
       }
 
-      const res = await OrderAPI.createOrder({
+      const res = await AdminOrderAPI.createOrder({
         user_id: userId,
         plan_id: planId,
         domain,
@@ -47,9 +49,7 @@ const AdminOrders = () => {
       const sessionId = res.data.payment_session_id;
       const orderId = res.data.order_id;
 
-      const cashfree = window.Cashfree({
-        mode: "sandbox",
-      });
+      const cashfree = window.Cashfree({ mode: "sandbox" });
 
       cashfree
         .checkout({
@@ -57,30 +57,13 @@ const AdminOrders = () => {
           redirectTarget: "_modal",
         })
         .then(async () => {
-          let attempts = 0;
-          let success = false;
+          const verify = await PaymentAPI.verifyPayment({ orderId });
 
-          while (attempts < 5 && !success) {
-            const verify = await PaymentAPI.verifyPayment({ orderId });
-
-            if (verify.data.success) {
-              toast.success("Payment Successful");
-
-              setTimeout(() => {
-                toast.success("Account Created Successfully");
-              }, 1500);
-
-              loadOrders();
-              success = true;
-              break;
-            }
-
-            attempts++;
-            await new Promise((r) => setTimeout(r, 2000));
-          }
-
-          if (!success) {
-            toast.error("Payment Verification Failed");
+          if (verify.data.success) {
+            toast.success("Payment Successful");
+            loadOrders();
+          } else {
+            toast.error("Payment Failed");
           }
         });
     } catch {
@@ -88,14 +71,52 @@ const AdminOrders = () => {
     }
   };
 
+  /* ===============================
+     REGISTER DOMAIN
+  ================================= */
+  const registerDomain = async (id) => {
+  try {
+    const res = await AdminOrderAPI.registerDomain(id);
+
+    toast.success(res.data?.message || "Domain Registered");
+
+    // 🔥 FORCE REFRESH STATE PROPERLY
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === id
+          ? { ...o, domain_status: "registered" }
+          : o
+      )
+    );
+
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+  /* ===============================
+     FILTER LOGIC (IMPORTANT FIX)
+  ================================= */
+
+  // ✅ Only pending → New Orders page
+  const newOrders = orders.filter((o) => o.status === "pending");
+
+  // ✅ Only completed → All Orders page
+  const allOrders = orders.filter((o) => o.status === "active");
+
+  const displayOrders = isNewOrderPage ? newOrders : allOrders;
+
   return (
-    <div className="text-white">
+    <div className="text-white p-6">
       <h1 className="text-3xl mb-6">
-        {isNewOrder ? "Create New Order" : "All Orders"}
+        {isNewOrderPage ? "New Orders" : "All Orders"}
       </h1>
 
-      {isNewOrder && (
-        <div className="bg-[#0f172a] p-6 rounded-xl w-96">
+      {/* ===============================
+          CREATE ORDER (ONLY NEW PAGE)
+      ============================== */}
+      {isNewOrderPage && (
+        <div className="bg-[#0f172a] p-6 rounded-xl w-96 mb-8">
           <select
             className="w-full p-2 mb-3 bg-[#020617]"
             onChange={(e) => setUserId(e.target.value)}
@@ -136,31 +157,57 @@ const AdminOrders = () => {
         </div>
       )}
 
-      {!isNewOrder && (
-        <table className="w-full bg-[#0f172a] rounded-lg">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="p-3">User</th>
-              <th>Plan</th>
-              <th>Domain</th>
-              <th>Price</th>
-              <th>Status</th>
-            </tr>
-          </thead>
+      {/* ===============================
+          ORDERS TABLE
+      ============================== */}
+      <table className="w-full bg-[#0f172a] rounded-lg">
+        <thead>
+          <tr className="border-b border-gray-700">
+            <th>User</th>
+            <th>Plan</th>
+            <th>Domain</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Domain</th>
+          </tr>
+        </thead>
 
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} className="text-center border-b border-gray-800">
-                <td>{o.User?.email}</td>
-                <td>{o.Plan?.name}</td>
-                <td>{o.domain}</td>
-                <td>{o.price}</td>
-                <td>{o.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+        <tbody>
+          {displayOrders.map((o) => (
+            <tr key={o.id} className="text-center border-b border-gray-800">
+              <td>{o.User?.email}</td>
+              <td>{o.Plan?.name}</td>
+              <td>{o.domain}</td>
+              <td>₹{o.total_price}</td>
+
+              {/* STATUS */}
+              <td>
+                {o.status === "active" ? (
+                  <span className="text-green-400">Active</span>
+                ) : (
+                  <span className="text-yellow-400">Pending</span>
+                )}
+              </td>
+
+              {/* DOMAIN STATUS FIX */}
+              <td>
+                {o.domain_status === "registered" ? (
+                  <span className="text-green-400 font-semibold">
+                    Successful
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => registerDomain(o.id)}
+                    className="bg-yellow-500 px-2 py-1 rounded"
+                  >
+                    Transfer
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };

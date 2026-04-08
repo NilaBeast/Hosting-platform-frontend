@@ -122,6 +122,23 @@ export const DomainAPI = {
 };
 
 /* ===============================
+   DOMAIN SEARCH APIs (UPDATED)
+================================ */
+export const DomainSearchAPI = {
+  checkDomain: (domain) =>
+    API.get(`api/domain-search/check?domain=${domain}`),
+};
+
+/* ===============================
+   ADMIN ORDER APIs (UPDATED)
+================================ */
+export const AdminOrderAPI = {
+  createOrder: (data) => API.post("api/admin/orders/create", data),
+  getOrders: () => API.get("api/admin/orders"),
+  registerDomain: (orderId) =>
+    API.post("api/admin/orders/register-domain", { orderId }),
+};
+/* ===============================
    DEPLOY APIs
 ================================ */
 export const DeployAPI = {

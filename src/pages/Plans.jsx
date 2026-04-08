@@ -1,18 +1,31 @@
 import { useEffect, useState } from "react";
-import { PlanAPI, PaymentAPI } from "../api/api";
+import {
+  PlanAPI,
+  PaymentAPI,
+  DomainAPI,
+  DomainSearchAPI,
+} from "../api/api";
 import toast from "react-hot-toast";
 
 const Plans = () => {
   const [plans, setPlans] = useState([]);
   const [orders, setOrders] = useState({});
   const [paymentModal, setPaymentModal] = useState(null);
+
   const [domainModal, setDomainModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+
   const [domain, setDomain] = useState("");
+  const [domains, setDomains] = useState([]);
+  const [selectedDomain, setSelectedDomain] = useState("");
+
+  const [searchResult, setSearchResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadPlans();
     loadMyOrders();
+    loadDomains();
     checkReturnPayment();
   }, []);
 
@@ -30,93 +43,85 @@ const Plans = () => {
     setOrders(map);
   };
 
-  /* CHECK PAYMENT RETURN */
+  const loadDomains = async () => {
+    const res = await DomainAPI.getDomains();
+    setDomains(res.data);
+
+    const selected = res.data.find((d) => d.is_selected);
+    if (selected) setSelectedDomain(selected.domain);
+  };
+
   const checkReturnPayment = async () => {
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get("order_id");
 
     if (!orderId) return;
 
-    let attempts = 0;
-    let success = false;
+    const res = await PaymentAPI.verifyPayment({ orderId });
 
-    while (attempts < 5 && !success) {
-      const res = await PaymentAPI.verifyPayment({ orderId });
-
-      if (res.data.success) {
-        toast.success("Payment Successful");
-        setPaymentModal("success");
-        loadMyOrders();
-        success = true;
-        break;
-      }
-
-      attempts++;
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-
-    if (!success) {
-      toast.error("Payment Verification Failed");
+    if (res.data.success) {
+      toast.success("Payment Successful");
+      setPaymentModal("success");
+      loadMyOrders();
+    } else {
+      toast.error("Payment Failed");
       setPaymentModal("failed");
     }
 
     window.history.replaceState({}, document.title, "/plans");
   };
 
-  /* OPEN DOMAIN MODAL */
   const openDomainModal = (plan) => {
     setSelectedPlan(plan);
     setDomainModal(true);
   };
 
-  /* CONFIRM PAYMENT */
-  const confirmPayment = async () => {
-    if (!domain) return alert("Enter domain");
+  const checkDomain = async () => {
+    if (!domain) return toast.error("Enter domain");
 
-    const res = await PaymentAPI.createOrder({
-      planId: selectedPlan.id,
-      domain,
-    });
-
-    const sessionId = res.data.payment_session_id;
-    const orderId = res.data.order_id;
-
-    const cashfree = window.Cashfree({
-      mode: "sandbox",
-    });
-
-    setDomainModal(false);
-
-    cashfree
-      .checkout({
-        paymentSessionId: sessionId,
-        redirectTarget: "_modal",
-      })
-      .then(async () => {
-        let attempts = 0;
-        let success = false;
-
-        while (attempts < 5 && !success) {
-          const verify = await PaymentAPI.verifyPayment({ orderId });
-
-          if (verify.data.success) {
-            toast.success("Payment Successful");
-            setPaymentModal("success");
-            loadMyOrders();
-            success = true;
-            break;
-          }
-
-          attempts++;
-          await new Promise((r) => setTimeout(r, 2000));
-        }
-
-        if (!success) {
-          toast.error("Payment Failed");
-          setPaymentModal("failed");
-        }
-      });
+    setLoading(true);
+    try {
+      const res = await DomainSearchAPI.checkDomain(domain);
+      setSearchResult(res.data);
+    } catch {
+      toast.error("Check failed");
+    }
+    setLoading(false);
   };
+
+  
+
+  const confirmPayment = async () => {
+  const finalDomain = selectedDomain || domain;
+
+  if (!finalDomain) return toast.error("Select domain");
+
+  const res = await PaymentAPI.createOrder({
+    planId: selectedPlan.id,
+    domain: finalDomain,
+  });
+
+  const sessionId = res.data.payment_session_id;
+  const orderId = res.data.order_id;
+
+  const cashfree = window.Cashfree({ mode: "sandbox" });
+
+  setDomainModal(false);
+
+  cashfree.checkout({
+    paymentSessionId: sessionId,
+    redirectTarget: "_modal",
+  }).then(async () => {
+    const verify = await PaymentAPI.verifyPayment({ orderId });
+
+    if (verify.data.success) {
+      toast.success("Payment Successful");
+      loadMyOrders();
+    } else {
+      toast.error("Payment Failed");
+    }
+  });
+};
 
   const showValue = (val) => {
     if (val === -1) return "Unlimited";
@@ -205,27 +210,69 @@ const Plans = () => {
 
       {/* DOMAIN MODAL */}
       {domainModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-          <div className="bg-[#0f172a] p-8 rounded-xl w-96">
-            <h2 className="text-2xl mb-4">Enter Domain Name</h2>
+        <div className="fixed inset-0 bg-black/70 flex justify-center items-center">
+          <div className="bg-[#0f172a] p-6 rounded-xl w-[500px]">
+            <h2 className="text-xl mb-4">Choose Domain</h2>
 
+            {/* EXISTING DOMAINS */}
+            <div className="mb-4">
+              <h3 className="mb-2">Use Existing Domain</h3>
+              {domains.map((d) => (
+                <div key={d.id}>
+                  <input
+                    type="radio"
+                    checked={selectedDomain === d.domain}
+                    onChange={() => setSelectedDomain(d.domain)}
+                  />
+                  <span className="ml-2">{d.domain}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* NEW DOMAIN */}
             <input
-              className="w-full p-2 bg-[#020617] mb-4"
-              placeholder="example.com"
+              className="w-full p-2 bg-black mb-2"
+              placeholder="Enter new domain"
               value={domain}
-              onChange={(e) => setDomain(e.target.value)}
+              onChange={(e) => {
+                setDomain(e.target.value);
+                setSearchResult(null);
+              }}
             />
 
             <button
-              onClick={confirmPayment}
-              className="bg-blue-600 w-full p-2 rounded"
+              onClick={checkDomain}
+              className="bg-blue-600 px-3 py-1 mb-3"
             >
-              Continue to Payment
+              Check Availability
+            </button>
+
+            {loading && <p>Checking...</p>}
+
+            {searchResult && (
+              <div>
+                {searchResult.available ? (
+  <>
+    <p className="text-green-400">
+      Available - ₹{searchResult.price}
+    </p>
+  </>
+) : (
+  <p className="text-red-400">Not Available</p>
+)}
+              </div>
+            )}
+
+            <button
+              onClick={confirmPayment}
+              className="bg-green-600 w-full mt-4 p-2"
+            >
+              Continue with Selected Domain
             </button>
 
             <button
               onClick={() => setDomainModal(false)}
-              className="mt-3 w-full bg-gray-700 p-2 rounded"
+              className="bg-gray-600 w-full mt-2 p-2"
             >
               Cancel
             </button>
@@ -233,30 +280,19 @@ const Plans = () => {
         </div>
       )}
 
-      {/* PAYMENT RESULT MODAL */}
+      {/* PAYMENT RESULT */}
       {paymentModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-          <div className="bg-[#0f172a] p-8 rounded-xl text-center">
-            {paymentModal === "success" && (
-              <>
-                <h2 className="text-2xl text-green-500">
-                  Payment Successful
-                </h2>
-                <p>Hosting account activated.</p>
-              </>
-            )}
-
-            {paymentModal === "failed" && (
-              <>
-                <h2 className="text-2xl text-red-500">
-                  Payment Failed
-                </h2>
-              </>
-            )}
+        <div className="fixed inset-0 bg-black/70 flex justify-center items-center">
+          <div className="bg-[#0f172a] p-6 rounded text-center">
+            <h2>
+              {paymentModal === "success"
+                ? "Payment Successful"
+                : "Payment Failed"}
+            </h2>
 
             <button
               onClick={() => setPaymentModal(null)}
-              className="mt-4 bg-blue-600 px-4 py-2 rounded"
+              className="mt-4 bg-blue-600 px-4 py-2"
             >
               Close
             </button>
