@@ -10,7 +10,15 @@ import Register from "./pages/Register";
 import Settings from "./pages/Settings";
 import OAuthSuccess from "./pages/OAuthSuccess";
 import AdminProfile from "./admin/pages/AdminProfile";
+import { CheckoutProvider } from "./context/CheckoutContext";
+import CheckoutConfig from "./pages/CheckoutConfig";
+import CheckoutReview from "./pages/CheckoutReview";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import ProductPage from "./pages/ProductPage";
 
+import Support from "./pages/Support";
+import UserTickets from "./pages/UserTickets";
+import UserTicketDetails from "./pages/UserTicketDetails";
 
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
@@ -20,7 +28,13 @@ import AdminDashboard from "./admin/pages/AdminDashboard";
 import AdminUsers from "./admin/pages/AdminUsers";
 import AdminOrders from "./admin/pages/AdminOrders";
 import AdminBilling from "./admin/pages/AdminBilling";
+import AdminDomain from "./admin/pages/AdminDomain";
 import { Toaster } from "react-hot-toast";
+import AdminSettings from "./admin/pages/AdminSettings";
+import AdminProductEdit from "./admin/pages/AdminProductEdit";
+import AdminTickets from "./admin/pages/AdminTickets";
+import AdminOpenTicket from "./admin/pages/AdminOpenTicket";
+import AdminTicketDetails from "./admin/pages/AdminTicketDetails";
 
 /* ===============================
    AUTH CHECK
@@ -82,6 +96,7 @@ function Layout() {
 function App() {
   return (
     <BrowserRouter>
+    <CheckoutProvider>
       <Toaster />
 
       <Routes>
@@ -104,6 +119,14 @@ function App() {
     <Route path="/admin/new-order" element={<AdminOrders />} />
     <Route path="/admin/billing" element={<AdminBilling />} />
     <Route path="/admin/invoices" element={<AdminBilling />} />
+    <Route path="/admin/settings" element={<AdminSettings />} />
+    <Route path="/admin/product/:id" element={<AdminProductEdit />} />
+    <Route path="/admin/tickets" element={<AdminTickets />} />
+    <Route path="/admin/open-ticket" element={<AdminOpenTicket />} />
+    <Route path="/admin/tickets/:id" element={<AdminTicketDetails />} />
+
+    {/* 🔥 NEW ROUTE */}
+    <Route path="/admin/domain-pricing" element={<AdminDomain />} />
   </Route>
 </Route>
 
@@ -112,14 +135,25 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/plans" element={<Plans />} />
+            <Route path="/store/:groupSlug" element={<Plans />} />
+            <Route
+  path="/store/:groupSlug/:productSlug"
+  element={<Plans />}
+/>
             <Route path="/hosting" element={<Hosting />} />
             <Route path="/domains" element={<Domains />} />
             <Route path="/deploy" element={<Deploy />} />
             <Route path="/settings" element={<Settings />} />
-            
+            <Route path="/checkout/config" element={<CheckoutConfig />} />
+          <Route path="/checkout/review" element={<CheckoutReview />} />
+          <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/support" element={<Support />} />
+          <Route path="/tickets" element={<UserTickets />} />
+<Route path="/tickets/:id" element={<UserTicketDetails />} />
           </Route>
         </Route>
       </Routes>
+      </CheckoutProvider>
     </BrowserRouter>
   );
 }

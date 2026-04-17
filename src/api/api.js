@@ -15,19 +15,26 @@ API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
   const githubToken = localStorage.getItem("github_token");
 
-  if (token) req.headers.Authorization = token;
+  if (token) req.headers.Authorization = `Bearer ${token}`;
   if (githubToken) req.headers.github_token = githubToken;
 
   return req;
 });
 
 /* ===============================
-   RESPONSE INTERCEPTOR
+   RESPONSE INTERCEPTOR (🔥 FIXED)
 ================================ */
 API.interceptors.response.use(
   (res) => res,
   (err) => {
-    toast.error(err.response?.data || "Something went wrong");
+    const msg =
+      typeof err.response?.data === "string"
+        ? err.response.data
+        : err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Something went wrong";
+
+    toast.error(msg);
     return Promise.reject(err);
   }
 );
@@ -70,8 +77,6 @@ export const AdminAPI = {
   deleteUser: (id) => API.delete(`api/admin/users/${id}`),
   updateUser: (id, data) => API.put(`api/admin/users/${id}`, data),
 
-  
-
   getTransactions: () => API.get("api/admin/transactions"),
   getInvoices: () => API.get("api/admin/invoices"),
 
@@ -81,17 +86,67 @@ export const AdminAPI = {
   getServerStats: () => API.get("api/admin/server-stats"),
 };
 
+export const TicketAPI = {
+  create: (data) =>
+  API.post("api/tickets", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
+  getMy: () => API.get("api/tickets/my"),
+  getAll: () => API.get("api/tickets/admin"),
+  getById: (id) => API.get(`api/tickets/${id}`),
+  reply: (id, data) => API.post(`api/tickets/${id}/reply`, data),
+  close: (id) => API.post(`api/tickets/${id}/close`),
+};
+
+export const AdminProductAPI = {
+  getGroups: () => API.get("/api/admin/products/groups"),
+
+  createGroup: (data) => API.post("/api/admin/products/group", data),
+  updateGroup: (id, data) =>
+    API.put(`/api/admin/products/group/${id}`, data),
+  deleteGroup: (id) =>
+    API.delete(`/api/admin/products/group/${id}`),
+
+  createProduct: (data) =>
+    API.post("/api/admin/products/product", data),
+  updateProduct: (id, data) =>
+    API.put(`/api/admin/products/product/${id}`, data),
+  deleteProduct: (id) =>
+    API.delete(`/api/admin/products/product/${id}`),
+
+  getWHMPackages: () => API.get("/api/plans"),
+ 
+};
+
+export const ProductAPI = {
+  getBySlug: (group, product) =>
+    API.get(`/api/admin/products/store/${group}/${product}`),
+};
+
+/* ===============================
+   ORDER APIs
+================================ */
 export const OrderAPI = {
   createOrder: (data) => API.post("api/orders", data),
   getOrders: () => API.get("api/orders"),
 };
 
-/*================PAYMENT API===============*/
+/* ===============================
+   PAYMENT APIs (🔥 UPDATED)
+================================ */
 export const PaymentAPI = {
+  /* HOSTING + DOMAIN */
   createOrder: (data) => API.post("api/payment/create-order", data),
+
+  /* DOMAIN ONLY */
+  createDomainOrder: (data) =>
+    API.post("api/payment/create-domain-order", data),
+
   verifyPayment: (data) => API.post("api/payment/verify", data),
+
   getMyOrders: () => API.get("api/payment/my-orders"),
 };
+
 /* ===============================
    PLANS APIs
 ================================ */
@@ -112,13 +167,17 @@ export const HostingAPI = {
 };
 
 /* ===============================
-   DOMAIN APIs
+   DOMAIN APIs (UPDATED)
 ================================ */
 export const DomainAPI = {
   addDomain: (data) => API.post("api/domain/add", data),
   getDomains: () => API.get("api/domain"),
   deleteDomain: (id) => API.delete(`api/domain/${id}`),
   selectDomain: (data) => API.post("api/domain/select", data),
+
+  // ✅ NEW
+  addToCpanel: (data) => API.post("api/domain/add-to-cpanel", data),
+  getList: () => API.get("api/domain/list"),
 };
 
 /* ===============================
@@ -127,17 +186,28 @@ export const DomainAPI = {
 export const DomainSearchAPI = {
   checkDomain: (domain) =>
     API.get(`api/domain-search/check?domain=${domain}`),
+
+  // ✅ NEW
+  transferDomain: (data) =>
+    API.post("api/domain-search/transfer", data),
 };
 
 /* ===============================
-   ADMIN ORDER APIs (UPDATED)
+   ADMIN ORDER APIs (🔥 UPDATED)
 ================================ */
 export const AdminOrderAPI = {
   createOrder: (data) => API.post("api/admin/orders/create", data),
+
   getOrders: () => API.get("api/admin/orders"),
-  registerDomain: (orderId) =>
-    API.post("api/admin/orders/register-domain", { orderId }),
+
+  /* 🔥 SUPPORT DOMAIN SWITCH */
+  registerDomain: (orderId, domain) =>
+    API.post("api/admin/orders/register-domain", {
+      orderId,
+      domain,
+    }),
 };
+
 /* ===============================
    DEPLOY APIs
 ================================ */
@@ -163,6 +233,9 @@ export const SettingsAPI = {
   updateSettings: (data) => API.put("api/settings", data),
 };
 
+/* ===============================
+   PROFILE APIs
+================================ */
 export const ProfileAPI = {
   getProfile: () => API.get("api/profile"),
   updateProfile: (data) =>
@@ -171,4 +244,27 @@ export const ProfileAPI = {
     }),
 };
 
+export const AdminDomainAPI = {
+  getPricing: () => API.get("api/admin/domain-pricing"),
+
+  updateMargins: (data) =>
+    API.post("api/admin/domain-pricing/margins", data),
+
+  updateTag: (data) =>
+    API.post("api/admin/domain-pricing/tag", data),
+
+  toggleSpotlight: (data) =>
+    API.post("api/admin/domain-pricing/spotlight", data),
+
+  updateAdvancedPricing: (data) =>
+    API.post("api/admin/domain-pricing/advanced-pricing", data),
+};
+
+export const AdminSettingsAPI = {
+  getPackagePricing: () =>
+    API.get("api/admin/settings/package-pricing"),
+
+  updatePackagePricing: (data) =>
+    API.post("api/admin/settings/package-pricing", data),
+};
 export default API;

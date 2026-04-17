@@ -5,8 +5,6 @@ import { useLocation } from "react-router-dom";
 
 const AdminOrders = () => {
   const location = useLocation();
-
-  // 🔥 Detect route
   const isNewOrderPage = location.pathname === "/admin/new-order";
 
   const [orders, setOrders] = useState([]);
@@ -46,168 +44,194 @@ const AdminOrders = () => {
         domain,
       });
 
-      const sessionId = res.data.payment_session_id;
-      const orderId = res.data.order_id;
-
       const cashfree = window.Cashfree({ mode: "sandbox" });
 
-      cashfree
-        .checkout({
-          paymentSessionId: sessionId,
-          redirectTarget: "_modal",
-        })
-        .then(async () => {
-          const verify = await PaymentAPI.verifyPayment({ orderId });
-
-          if (verify.data.success) {
-            toast.success("Payment Successful");
-            loadOrders();
-          } else {
-            toast.error("Payment Failed");
-          }
+      cashfree.checkout({
+        paymentSessionId: res.data.payment_session_id,
+        redirectTarget: "_modal",
+      }).then(async () => {
+        const verify = await PaymentAPI.verifyPayment({
+          orderId: res.data.order_id,
         });
+
+        if (verify.data.success) {
+          toast.success("Payment Successful");
+          loadOrders();
+        } else {
+          toast.error("Payment Failed");
+        }
+      });
     } catch {
       toast.error("Order creation failed");
     }
   };
 
   /* ===============================
-     REGISTER DOMAIN
+     REGISTER / TRANSFER DOMAIN
   ================================= */
-  const registerDomain = async (id) => {
-  try {
-    const res = await AdminOrderAPI.registerDomain(id);
+  const registerDomain = async (id, domain) => {
+    try {
+      const res = await AdminOrderAPI.registerDomain(id, domain);
+      toast.success(res.data?.message || "Done");
 
-    toast.success(res.data?.message || "Domain Registered");
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === id ? { ...o, domain_status: "registered" } : o
+        )
+      );
+    } catch {
+      toast.error("Failed");
+    }
+  };
 
-    // 🔥 FORCE REFRESH STATE PROPERLY
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === id
-          ? { ...o, domain_status: "registered" }
-          : o
-      )
-    );
-
-  } catch (err) {
-    console.log(err);
-  }
-};
-
-  /* ===============================
-     FILTER LOGIC (IMPORTANT FIX)
-  ================================= */
-
-  // ✅ Only pending → New Orders page
   const newOrders = orders.filter((o) => o.status === "pending");
-
-  // ✅ Only completed → All Orders page
   const allOrders = orders.filter((o) => o.status === "active");
 
   const displayOrders = isNewOrderPage ? newOrders : allOrders;
 
+  const hostingOrders = displayOrders.filter((o) => o.type === "hosting");
+  const domainOrders = displayOrders.filter((o) => o.type === "domain");
+
   return (
-    <div className="text-white p-6">
-      <h1 className="text-3xl mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#020617] via-[#020617] to-[#0f172a] text-white p-8">
+      {/* HEADER */}
+      <h1 className="text-4xl font-bold mb-8 tracking-tight">
         {isNewOrderPage ? "New Orders" : "All Orders"}
       </h1>
 
       {/* ===============================
-          CREATE ORDER (ONLY NEW PAGE)
+          CREATE ORDER (MODERN CARD)
       ============================== */}
       {isNewOrderPage && (
-        <div className="bg-[#0f172a] p-6 rounded-xl w-96 mb-8">
-          <select
-            className="w-full p-2 mb-3 bg-[#020617]"
-            onChange={(e) => setUserId(e.target.value)}
-          >
-            <option>Select User</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.email}
-              </option>
-            ))}
-          </select>
+        <div className="bg-white/5 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 mb-10 w-full max-w-md shadow-lg">
+          <h2 className="text-xl mb-4 font-semibold">Create Order</h2>
 
-          <select
-            className="w-full p-2 mb-3 bg-[#020617]"
-            onChange={(e) => setPlanId(e.target.value)}
-          >
-            <option>Select Plan</option>
-            {plans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-3">
+            <select
+              className="w-full p-3 rounded-lg bg-black/40 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => setUserId(e.target.value)}
+            >
+              <option>Select User</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.email}
+                </option>
+              ))}
+            </select>
 
-          <input
-            className="w-full p-2 mb-3 bg-[#020617]"
-            placeholder="Domain"
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-          />
+            <select
+              className="w-full p-3 rounded-lg bg-black/40 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => setPlanId(e.target.value)}
+            >
+              <option>Select Plan</option>
+              {plans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
 
-          <button
-            onClick={createOrder}
-            className="bg-blue-600 px-4 py-2 rounded w-full"
-          >
-            Create Order & Pay
-          </button>
+            <input
+              className="w-full p-3 rounded-lg bg-black/40 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="example.com"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+            />
+
+            <button
+              onClick={createOrder}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 transition p-3 rounded-lg font-medium shadow-lg"
+            >
+              Create Order & Pay
+            </button>
+          </div>
         </div>
       )}
 
       {/* ===============================
-          ORDERS TABLE
+          HOSTING ORDERS
       ============================== */}
-      <table className="w-full bg-[#0f172a] rounded-lg">
-        <thead>
-          <tr className="border-b border-gray-700">
-            <th>User</th>
-            <th>Plan</th>
-            <th>Domain</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Domain</th>
-          </tr>
-        </thead>
+      <h2 className="text-2xl font-semibold mb-4">Hosting Orders</h2>
 
-        <tbody>
-          {displayOrders.map((o) => (
-            <tr key={o.id} className="text-center border-b border-gray-800">
-              <td>{o.User?.email}</td>
-              <td>{o.Plan?.name}</td>
-              <td>{o.domain}</td>
-              <td>₹{o.total_price}</td>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {hostingOrders.map((o) => (
+          <div
+            key={o.id}
+            className="bg-white/5 border border-gray-700 rounded-2xl p-5 backdrop-blur-xl hover:scale-[1.02] transition duration-300 shadow-md"
+          >
+            <div className="mb-3">
+              <p className="text-sm text-gray-400">Domain</p>
+              <p className="text-lg font-semibold">{o.domain}</p>
+            </div>
 
-              {/* STATUS */}
-              <td>
-                {o.status === "active" ? (
-                  <span className="text-green-400">Active</span>
-                ) : (
-                  <span className="text-yellow-400">Pending</span>
-                )}
-              </td>
+            <div className="mb-3">
+              <p className="text-sm text-gray-400">Plan</p>
+              <p>{o.Plan?.name}</p>
+            </div>
 
-              {/* DOMAIN STATUS FIX */}
-              <td>
-                {o.domain_status === "registered" ? (
-                  <span className="text-green-400 font-semibold">
-                    Successful
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => registerDomain(o.id)}
-                    className="bg-yellow-500 px-2 py-1 rounded"
-                  >
-                    Transfer
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            <div className="flex justify-between items-center">
+              <span
+                className={`text-xs px-2 py-1 rounded-full ${
+                  o.status === "active"
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-yellow-500/20 text-yellow-400"
+                }`}
+              >
+                {o.status}
+              </span>
+
+              {o.domain_status !== "registered" && (
+                <button
+                  onClick={() => registerDomain(o.id, o.domain)}
+                  className="bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded-lg text-sm transition"
+                >
+                  Register
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ===============================
+          DOMAIN ORDERS
+      ============================== */}
+      <h2 className="text-2xl font-semibold mt-12 mb-4">Domain Orders</h2>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {domainOrders.map((o) => (
+          <div
+            key={o.id}
+            className="bg-white/5 border border-gray-700 rounded-2xl p-5 backdrop-blur-xl hover:scale-[1.02] transition duration-300 shadow-md"
+          >
+            <div className="mb-3">
+              <p className="text-sm text-gray-400">Domain</p>
+              <p className="text-lg font-semibold">{o.domain}</p>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span
+                className={`text-xs px-2 py-1 rounded-full ${
+                  o.status === "active"
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-yellow-500/20 text-yellow-400"
+                }`}
+              >
+                {o.status}
+              </span>
+
+              {o.domain_status !== "registered" && (
+                <button
+                  onClick={() => registerDomain(o.id, o.domain)}
+                  className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-lg text-sm transition"
+                >
+                  Transfer
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

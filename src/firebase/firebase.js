@@ -2,10 +2,12 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBOX0vU5GT0FRHeQaWBglPKQmcy7qpc6r8",
-  authDomain: "web-hosting-381ec.firebaseapp.com",
-  projectId: "web-hosting-381ec",
-  appId: "1:504637972829:web:413e94fc85b71c17c948b4",
+  apiKey: "AIzaSyCZT6UkcUitwRFvCa0tqzos2Q1E9IpKcg4",
+  authDomain: "hostzuno.firebaseapp.com",
+  projectId: "hostzuno",
+  storageBucket: "hostzuno.firebasestorage.app",
+  messagingSenderId: "236501912578",
+  appId: "1:236501912578:web:742eaf79e6e53dea7a2b1b"
 };
 
 const app = initializeApp(firebaseConfig);
