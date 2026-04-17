@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { TicketAPI } from "../api/api";
 import toast from "react-hot-toast";
 
@@ -12,6 +12,11 @@ export default function Support() {
     priority: "Medium",
   });
 
+  const [activeFormats, setActiveFormats] = useState({
+  bold: false,
+  italic: false,
+});
+
   const [files, setFiles] = useState([]);
 
   /* 🔥 LINK MODAL STATE */
@@ -21,10 +26,30 @@ export default function Support() {
   /* ===============================
      FORMAT COMMANDS
   ============================== */
-  const format = (command) => {
-    document.execCommand(command, false, null);
+ const format = (command) => {
+  document.execCommand(command);
+
+  // update state after applying
+  setActiveFormats((prev) => ({
+    ...prev,
+    [command]: document.queryCommandState(command),
+  }));
+};
+
+useEffect(() => {
+  const updateState = () => {
+    setActiveFormats({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+    });
   };
 
+  document.addEventListener("selectionchange", updateState);
+
+  return () => {
+    document.removeEventListener("selectionchange", updateState);
+  };
+}, []);
   /* ===============================
      APPLY LINK
   ============================== */
@@ -122,26 +147,51 @@ export default function Support() {
         />
 
         {/* 🔥 TOOLBAR */}
-        <div className="flex gap-2 mb-2">
-          <button onClick={() => format("bold")} className="px-2 py-1 bg-gray-700 rounded">B</button>
-          <button onClick={() => format("italic")} className="px-2 py-1 bg-gray-700 rounded">I</button>
-          <button
-            onClick={() =>
-              document.execCommand("insertHTML", false, "<code>code</code>")
-            }
-            className="px-2 py-1 bg-gray-700 rounded"
-          >
-            {"</>"}
-          </button>
+       <div className="flex gap-2 mb-2">
 
-          {/* 🔥 LINK BUTTON */}
-          <button
-            onClick={() => setShowLinkModal(true)}
-            className="px-2 py-1 bg-gray-700 rounded"
-          >
-            🔗
-          </button>
-        </div>
+  {/* BOLD */}
+  <button
+    onClick={() => format("bold")}
+    className={`px-2 py-1 rounded ${
+      activeFormats.bold
+        ? "bg-purple-600 text-white"
+        : "bg-gray-700"
+    }`}
+  >
+    B
+  </button>
+
+  {/* ITALIC */}
+  <button
+    onClick={() => format("italic")}
+    className={`px-2 py-1 rounded ${
+      activeFormats.italic
+        ? "bg-purple-600 text-white"
+        : "bg-gray-700"
+    }`}
+  >
+    I
+  </button>
+
+  {/* CODE */}
+  <button
+    onClick={() =>
+      document.execCommand("insertHTML", false, "<code>code</code>")
+    }
+    className="px-2 py-1 bg-gray-700 rounded"
+  >
+    {"</>"}
+  </button>
+
+  {/* LINK */}
+  <button
+    onClick={() => setShowLinkModal(true)}
+    className="px-2 py-1 bg-gray-700 rounded"
+  >
+    🔗
+  </button>
+
+</div>
 
         {/* EDITOR */}
         <div
@@ -161,9 +211,9 @@ export default function Support() {
         />
 
         {/* CAPTCHA */}
-        <div className="bg-white text-black p-3 w-fit mb-4">
+        {/* <div className="bg-white text-black p-3 w-fit mb-4">
           ☐ I'm not a robot
-        </div>
+        </div> */}
 
         {/* BUTTONS */}
         <div className="flex justify-end gap-3">
