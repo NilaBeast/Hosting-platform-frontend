@@ -115,7 +115,19 @@ export const AdminProductAPI = {
     API.delete(`/api/admin/products/product/${id}`),
 
   getWHMPackages: () => API.get("/api/plans"),
+
+  getProductsByGroup: (groupId) =>
+    API.get(`/api/admin/products/group/${groupId}/products`),
+
+  getPlansByProduct: (productId) =>
+    API.get(`/api/admin/products/product/${productId}/plans`),
  
+};
+
+export const AdminAccountsAPI = {
+  getAccounts: () => API.get("api/admin/accounts"),
+  importAccounts: (data) =>
+    API.post("api/admin/accounts/import", data),
 };
 
 export const ProductAPI = {

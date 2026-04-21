@@ -15,7 +15,9 @@ const AdminSettings = () => {
 
   const [form, setForm] = useState({});
   const [productForm, setProductForm] = useState({});
-const navigate = useNavigate();
+
+  const navigate = useNavigate();
+
   useEffect(() => {
     load();
   }, []);
@@ -71,13 +73,20 @@ const navigate = useNavigate();
   };
 
   const openEditProduct = (p) => {
-    setProductForm(p);
+    setProductForm({
+      ...p,
+      product_group_id: p.product_group_id, // ✅ ensure correct field
+    });
     setEditProduct(p);
     setProductModal(true);
   };
 
   const saveProduct = async () => {
     if (!productForm.name) return toast.error("Product name required");
+
+    if (!productForm.product_group_id) {
+      return toast.error("Product group is required");
+    }
 
     if (editProduct) {
       await AdminProductAPI.updateProduct(editProduct.id, productForm);
@@ -201,14 +210,18 @@ const navigate = useNavigate();
               }
             />
 
-            {/* GROUP */}
+            {/* ✅ FIXED GROUP FIELD */}
             <select
               className="w-full p-2 bg-black mb-2"
+              value={productForm.product_group_id || ""}
               onChange={(e) =>
-                setProductForm({ ...productForm, group_id: e.target.value })
+                setProductForm({
+                  ...productForm,
+                  product_group_id: e.target.value,
+                })
               }
             >
-              <option>Select Group</option>
+              <option value="">Select Group</option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
@@ -219,6 +232,7 @@ const navigate = useNavigate();
             {/* WHM PACKAGE */}
             <select
               className="w-full p-2 bg-black mb-2"
+              value={productForm.whm_package_name || ""}
               onChange={(e) =>
                 setProductForm({
                   ...productForm,
@@ -226,7 +240,7 @@ const navigate = useNavigate();
                 })
               }
             >
-              <option>Select WHM Package</option>
+              <option value="">Select WHM Package</option>
               {packages.map((p) => (
                 <option key={p.id} value={p.whm_package_name}>
                   {p.name}
@@ -237,6 +251,7 @@ const navigate = useNavigate();
             <textarea
               placeholder="Description"
               className="w-full p-2 bg-black mb-2"
+              value={productForm.description || ""}
               onChange={(e) =>
                 setProductForm({
                   ...productForm,
@@ -252,7 +267,6 @@ const navigate = useNavigate();
           </div>
         </div>
       )}
-
     </div>
   );
 };

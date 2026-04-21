@@ -35,7 +35,7 @@ import AdminProductEdit from "./admin/pages/AdminProductEdit";
 import AdminTickets from "./admin/pages/AdminTickets";
 import AdminOpenTicket from "./admin/pages/AdminOpenTicket";
 import AdminTicketDetails from "./admin/pages/AdminTicketDetails";
-
+import AdminAccounts from "./admin/pages/AdminAccounts";
 /* ===============================
    AUTH CHECK
 ================================ */
@@ -124,6 +124,7 @@ function App() {
     <Route path="/admin/tickets" element={<AdminTickets />} />
     <Route path="/admin/open-ticket" element={<AdminOpenTicket />} />
     <Route path="/admin/tickets/:id" element={<AdminTicketDetails />} />
+    <Route path="/admin/accounts" element={<AdminAccounts />} />
 
     {/* 🔥 NEW ROUTE */}
     <Route path="/admin/domain-pricing" element={<AdminDomain />} />

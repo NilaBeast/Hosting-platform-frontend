@@ -70,6 +70,15 @@ const AdminSidebar = () => {
           </Link>
         </div>
 
+        <div>
+          <p className="text-gray-500 mb-2 uppercase text-xs tracking-wide">
+            Accounts
+          </p>
+          <Link to="/admin/accounts" className={linkClass("/admin/accounts")}>
+  All Accounts
+</Link>
+        </div>
+
         {/* SUPPORT */}
         <div>
           <p className="text-gray-500 mb-2 uppercase text-xs tracking-wide">
