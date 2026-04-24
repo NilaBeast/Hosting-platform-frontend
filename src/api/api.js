@@ -76,6 +76,8 @@ export const AdminAPI = {
   addUser: (data) => API.post("api/admin/users", data),
   deleteUser: (id) => API.delete(`api/admin/users/${id}`),
   updateUser: (id, data) => API.put(`api/admin/users/${id}`, data),
+  getUserDetails: (id) => API.get(`api/admin/users/${id}`),
+  updateUserDetails: (id, data) => API.put(`api/admin/users/${id}/details`, data),
 
   getTransactions: () => API.get("api/admin/transactions"),
   getInvoices: () => API.get("api/admin/invoices"),

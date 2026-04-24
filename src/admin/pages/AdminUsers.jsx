@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AdminAPI } from "../../api/api";
 import toast from "react-hot-toast";
 
 const AdminUsers = () => {
   const location = useLocation();
   const isAddUser = location.pathname === "/admin/add-user";
+  const navigate = useNavigate();
 
   const [users, setUsers] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
@@ -213,6 +214,12 @@ const AdminUsers = () => {
 
                 {/* ACTION */}
                 <td className="space-x-2">
+                  <button
+                    onClick={() => navigate(`/admin/users/${u.id}`)}
+                    className="bg-blue-600 px-3 py-1 rounded"
+                  >
+                    View
+                  </button>
                   {editingUser === u.id ? (
                     <button
                       onClick={updateUser}

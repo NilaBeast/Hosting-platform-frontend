@@ -113,43 +113,40 @@ const [productPrice, setProductPrice] = useState(0);
      CREATE ORDER (🔥 FIXED)
   ============================== */
   const createOrder = async () => {
-    try {
-      if (!userId || !productId || !domain || !billingCycle) {
-  return toast.error("All fields required");
-}
-
-      if (domainStatus !== "available") {
-        return toast.error("Check domain availability first");
-      }
-
-      const res = await AdminOrderAPI.createOrder({
-  user_id: userId,
-  product_id: productId,
-  domain,
-  billing_cycle: billingCycle, // ✅ NEW
-});
-
-      const cashfree = window.Cashfree({ mode: "sandbox" });
-
-      cashfree.checkout({
-        paymentSessionId: res.data.payment_session_id,
-        redirectTarget: "_modal",
-      }).then(async () => {
-        const verify = await PaymentAPI.verifyPayment({
-          orderId: res.data.order_id,
-        });
-
-        if (verify.data.success) {
-          toast.success("Payment Successful");
-          loadOrders();
-        } else {
-          toast.error("Payment Failed");
-        }
-      });
-    } catch {
-      toast.error("Order creation failed");
+  try {
+    if (!userId || !productId || !domain || !billingCycle) {
+      return toast.error("All fields required");
     }
-  };
+
+    if (domainStatus !== "available") {
+      return toast.error("Check domain availability first");
+    }
+
+    // ✅ CALL BACKEND WITH ADMIN FLAG
+    const res = await AdminOrderAPI.createOrder({
+      user_id: userId,
+      product_id: productId,
+      domain,
+      billing_cycle: billingCycle,
+      isAdminOrder: true, // 🔥 IMPORTANT
+    });
+
+    // ❌ REMOVE CASHFREE COMPLETELY
+    // ❌ NO checkout()
+    // ❌ NO verifyPayment()
+
+    if (res.data.success) {
+      toast.success("Order created & hosting activated");
+      loadOrders();
+    } else {
+      toast.error("Order failed");
+    }
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Order creation failed");
+  }
+};
 
   /* ===============================
      REGISTER DOMAIN
