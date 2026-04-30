@@ -48,9 +48,11 @@ const AdminBilling = () => {
               <th className="p-3">User ID</th>
               <th>Name</th>
               <th>Email</th>
-              <th>Plan</th>
+              <th>Source</th>
+              <th>Description</th>
               <th>Payment ID</th>
-              <th>Amount</th>
+              <th>In</th>
+              <th>Out</th>
               <th>Status</th>
               <th>Date</th>
             </tr>
@@ -62,27 +64,30 @@ const AdminBilling = () => {
                 key={t.id}
                 className="text-center border-b border-gray-800"
               >
-                <td>{t.User?.id}</td>
-                <td>{t.User?.name}</td>
-                <td>{t.User?.email}</td>
-                <td>{t.Plan?.name}</td>
-                <td>{t.payment_id}</td>
-                <td>₹{t.payment_amount}</td>
+                <td>{t.user?.id ?? "-"}</td>
+                <td>{t.user?.name ?? "-"}</td>
+                <td>{t.user?.email ?? "-"}</td>
+                <td>{t.source || "-"}</td>
+                <td className="text-left px-3">{t.description || "-"}</td>
+                <td>{t.paymentId || "-"}</td>
+                <td>₹{Number(t.amountIn || 0)}</td>
+                <td>₹{Number(t.amountOut || 0)}</td>
                 <td>
                   <span
                     className={
-                      t.payment_status === "success"
+                      String(t.status || "").toLowerCase() === "success" ||
+                      String(t.status || "").toLowerCase() === "paid"
                         ? "text-green-400"
-                        : t.payment_status === "failed"
+                        : String(t.status || "").toLowerCase() === "failed"
                         ? "text-red-400"
                         : "text-yellow-400"
                     }
                   >
-                    {t.payment_status || "pending"}
+                    {t.status || "pending"}
                   </span>
                 </td>
                 <td>
-                  {new Date(t.createdAt).toLocaleDateString()}
+                  {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "-"}
                 </td>
               </tr>
             ))}

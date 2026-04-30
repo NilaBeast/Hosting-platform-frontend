@@ -1,17 +1,37 @@
 import { useEffect, useState } from "react";
 import { AdminAccountsAPI } from "../../api/api";
+import toast from "react-hot-toast";
 
 const AdminAccounts = () => {
   const [accounts, setAccounts] = useState([]);
   const [selected, setSelected] = useState([]);
+  const [syncing, setSyncing] = useState(false);
 
-  const load = async () => {
-    const res = await AdminAccountsAPI.getAccounts();
-    setAccounts(res.data);
+  const load = async (silent = false) => {
+    try {
+      setSyncing(true);
+      const res = await AdminAccountsAPI.getAccounts();
+      const payload = res.data;
+      const list = Array.isArray(payload) ? payload : payload?.accounts;
+      setAccounts(Array.isArray(list) ? list : []);
+      if (!silent) {
+        if (payload?.whmError) {
+          toast.error(payload.whmError);
+        } else if (payload?.whmCached && payload?.whmFetchedAt) {
+          toast.error(
+            `WHM unreachable, showing cached data (${payload.whmFetchedAt})`
+          );
+        }
+      }
+    } catch {
+      if (!silent) toast.error("Failed to sync WHM accounts");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   useEffect(() => {
-    load();
+    load(true);
   }, []);
 
   /* SELECT */
@@ -40,10 +60,11 @@ const AdminAccounts = () => {
         <h1 className="text-3xl font-bold">Accounts</h1>
 
         <button
-          onClick={load}
-          className="bg-blue-600 px-4 py-2 rounded"
+          onClick={() => load(false)}
+          className="bg-blue-600 px-4 py-2 rounded disabled:opacity-60"
+          disabled={syncing}
         >
-          🔄 Sync WHM
+          {syncing ? "Syncing..." : "🔄 Sync WHM"}
         </button>
       </div>
 

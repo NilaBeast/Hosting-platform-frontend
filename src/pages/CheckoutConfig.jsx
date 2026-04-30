@@ -156,7 +156,7 @@ const CheckoutConfig = () => {
 
           {/* CURRENCY */}
           <div className="flex gap-3 mb-3">
-            {["INR", "USD"].map((cur) => (
+            {["INR"].map((cur) => (
               <button
                 key={cur}
                 onClick={() => setCurrency(cur)}

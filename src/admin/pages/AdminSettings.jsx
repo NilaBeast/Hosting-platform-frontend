@@ -23,11 +23,15 @@ const AdminSettings = () => {
   }, []);
 
   const load = async () => {
-    const g = await AdminProductAPI.getGroups();
-    const p = await AdminProductAPI.getWHMPackages();
+    try {
+      const g = await AdminProductAPI.getGroups();
+      const p = await AdminProductAPI.getWHMPackages();
 
-    setGroups(g.data);
-    setPackages(p.data);
+      setGroups(g.data);
+      setPackages(p.data);
+    } catch (err) {
+      toast.error(err.response?.data || "Failed to load settings");
+    }
   };
 
   /* ================= GROUP ================= */
@@ -47,21 +51,30 @@ const AdminSettings = () => {
   const saveGroup = async () => {
     if (!form.name) return toast.error("Group name required");
 
-    if (editGroup) {
-      await AdminProductAPI.updateGroup(editGroup.id, form);
-    } else {
-      await AdminProductAPI.createGroup(form);
-    }
+    try {
+      if (editGroup) {
+        await AdminProductAPI.updateGroup(editGroup.id, form);
+      } else {
+        await AdminProductAPI.createGroup(form);
+      }
 
-    toast.success("Saved");
-    setGroupModal(false);
-    load();
+      toast.success("Saved");
+      setGroupModal(false);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data || "Save failed");
+    }
   };
 
   const deleteGroup = async (id) => {
     if (!confirm("Delete group?")) return;
-    await AdminProductAPI.deleteGroup(id);
-    load();
+    try {
+      await AdminProductAPI.deleteGroup(id);
+      toast.success("Deleted");
+      load();
+    } catch (err) {
+      toast.error(err.response?.data || "Delete failed");
+    }
   };
 
   /* ================= PRODUCT ================= */
@@ -88,21 +101,30 @@ const AdminSettings = () => {
       return toast.error("Product group is required");
     }
 
-    if (editProduct) {
-      await AdminProductAPI.updateProduct(editProduct.id, productForm);
-    } else {
-      await AdminProductAPI.createProduct(productForm);
-    }
+    try {
+      if (editProduct) {
+        await AdminProductAPI.updateProduct(editProduct.id, productForm);
+      } else {
+        await AdminProductAPI.createProduct(productForm);
+      }
 
-    toast.success("Saved");
-    setProductModal(false);
-    load();
+      toast.success("Saved");
+      setProductModal(false);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data || "Save failed");
+    }
   };
 
   const deleteProduct = async (id) => {
     if (!confirm("Delete product?")) return;
-    await AdminProductAPI.deleteProduct(id);
-    load();
+    try {
+      await AdminProductAPI.deleteProduct(id);
+      toast.success("Deleted");
+      load();
+    } catch (err) {
+      toast.error(err.response?.data || "Delete failed");
+    }
   };
 
   return (

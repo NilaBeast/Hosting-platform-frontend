@@ -161,6 +161,7 @@ const AdminUserDetails = () => {
   };
 
   const summary = serverData?.summary || {};
+  const meta = serverData?.meta || {};
   const domains = serverData?.domains || [];
   const hostingAccounts = serverData?.hostingAccounts || [];
   const orders = serverData?.orders || [];
@@ -169,34 +170,13 @@ const AdminUserDetails = () => {
   const emailLogs = serverData?.emailLogs || [];
 
   const ordersForDisplay = useMemo(() => {
-    if (Array.isArray(orders) && orders.length > 0) return orders;
+    return Array.isArray(orders) ? orders : [];
+  }, [orders]);
 
-    const fromServices = (Array.isArray(hostingAccounts) ? hostingAccounts : []).map((h) => ({
-      id: `SVC-${h?.id ?? ""}`,
-      domain: h?.domain ?? null,
-      total_price:
-        typeof h?.amount === "number"
-          ? h.amount
-          : Number(h?.amount || h?.price || h?.recurring_amount || 0) || null,
-      status: h?.status ?? null,
-      createdAt: h?.createdAt ?? h?.created_at ?? null,
-    }));
-
-    const fromDomains = (Array.isArray(domains) ? domains : []).map((d) => ({
-      id: `DOM-${d?.id ?? ""}`,
-      domain: d?.domain ?? null,
-      total_price:
-        typeof d?.recurring_amount === "number"
-          ? d.recurring_amount
-          : Number(d?.recurring_amount || 0) || null,
-      status: d?.status ?? null,
-      createdAt: d?.createdAt ?? d?.created_at ?? null,
-    }));
-
-    return [...fromServices, ...fromDomains];
-  }, [domains, hostingAccounts, orders]);
-
-  const ordersCount = ordersForDisplay.length;
+  const ordersCount =
+    typeof summary?.totalOrders === "number"
+      ? summary.totalOrders
+      : ordersForDisplay.length;
 
   const billableItems = Array.isArray(profile?.billableItems)
     ? profile.billableItems
@@ -308,7 +288,7 @@ const AdminUserDetails = () => {
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-gray-400">Company</span>
-                <span className="text-right">{profile?.companyName || "-"}</span>
+                <span className="text-right">{user?.company || "-"}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-gray-400">Address</span>
@@ -383,6 +363,17 @@ const AdminUserDetails = () => {
                 <span className="text-right">{summary.totalDomains ?? 0}</span>
               </div>
             </div>
+            {(meta.dbName || meta.dbHost) && (
+              <div className="mt-4 text-xs text-gray-500">
+                {meta.dbName ? `DB: ${meta.dbName}` : ""}
+                {meta.dbName && meta.dbHost ? " • " : ""}
+                {meta.dbHost ? `Host: ${meta.dbHost}` : ""}
+                {meta?.counts &&
+                  ` • Domains: ${meta.counts.domains ?? "-"} • Hosting: ${
+                    meta.counts.hostingAccounts ?? "-"
+                  } • Orders: ${meta.counts.orders ?? "-"}`}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -407,8 +398,8 @@ const AdminUserDetails = () => {
               <input
                 className="w-full p-2 bg-[#020617] rounded"
                 placeholder="Company Name"
-                value={profile?.companyName || ""}
-                onChange={(e) => setProfileField("companyName", e.target.value)}
+                value={user?.company || ""}
+                onChange={(e) => setUserField("company", e.target.value)}
               />
               <input
                 className="w-full p-2 bg-[#020617] rounded"
@@ -899,16 +890,31 @@ const AdminUserDetails = () => {
       )}
 
       {!loading && activeTab === "transactions" && (() => {
-        const systemTransactions = (orders || [])
+        const orderTransactions = (orders || [])
           .filter((o) => Number.isFinite(Number(o.payment_amount || o.total_price)))
           .map((o) => ({
-            source: "system",
+            source: "order",
             createdAt: o.createdAt,
             paymentMethod: o.payment_method || o.paymentMethod || "-",
             description: `Order #${o.id}${o.domain ? ` - ${o.domain}` : ""}`,
+            paymentId: o.payment_id || null,
             amountIn: Number(o.payment_amount || o.total_price || 0),
             fees: 0,
             amountOut: 0,
+          }));
+
+        const invoiceTransactions = (invoices || [])
+          .filter((inv) => Number.isFinite(Number(inv.amount)))
+          .map((inv) => ({
+            source: "invoice",
+            createdAt: inv.createdAt,
+            paymentMethod: "-",
+            description: `Invoice ${inv.invoice_number || `#${inv.id}`}`,
+            paymentId: inv.invoice_number || inv.id || null,
+            amountIn: Number(inv.amount || 0),
+            fees: 0,
+            amountOut: 0,
+            status: inv.status || null,
           }));
 
         const manual = (manualTransactions || []).map((t) => ({
@@ -916,7 +922,58 @@ const AdminUserDetails = () => {
           source: t?.source || "manual",
         }));
 
-        const all = [...systemTransactions, ...manual].sort((a, b) => {
+        const parseWhmcsInvoiceId = (value) => {
+          if (value == null) return null;
+          const str = String(value);
+          const m = str.match(/WHMCS-(\d+)/i) || str.match(/\b(\d{3,})\b/);
+          return m ? String(m[1]) : null;
+        };
+
+        const txnPriority = (t) => {
+          const src = String(t?.source || "").toLowerCase();
+          if (src === "order") return 3;
+          if (src === "invoice") return 2;
+          return 1;
+        };
+
+        const getTxnKey = (t) => {
+          const src = String(t?.source || "").toLowerCase();
+          if (src === "order") {
+            const id = t?.paymentId || t?.payment_id || null;
+            const created = t?.createdAt ? new Date(t.createdAt).toISOString() : "";
+            return `order:${id || ""}:${t?.description || ""}:${created}:${Number(t?.amountIn || 0)}`;
+          }
+
+          const invId =
+            parseWhmcsInvoiceId(t?.paymentId) ||
+            parseWhmcsInvoiceId(t?.invoiceId) ||
+            parseWhmcsInvoiceId(t?.transId) ||
+            parseWhmcsInvoiceId(t?.description);
+
+          if (invId) {
+            return `invoice:${invId}:${Number(t?.amountIn || 0)}`;
+          }
+
+          const created = t?.createdAt ? new Date(t.createdAt).toISOString() : "";
+          return `misc:${src}:${created}:${t?.description || ""}:${Number(t?.amountIn || 0)}:${Number(
+            t?.amountOut || 0
+          )}:${Number(t?.fees || 0)}`;
+        };
+
+        const byKey = new Map();
+        for (const t of [...orderTransactions, ...invoiceTransactions, ...manual]) {
+          const key = getTxnKey(t);
+          const existing = byKey.get(key);
+          if (!existing) {
+            byKey.set(key, t);
+            continue;
+          }
+          if (txnPriority(t) > txnPriority(existing)) {
+            byKey.set(key, t);
+          }
+        }
+
+        const all = Array.from(byKey.values()).sort((a, b) => {
           const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return db - da;

@@ -45,38 +45,42 @@ const AdminProductEdit = () => {
   /* ================= LOAD ================= */
 
   const load = async () => {
-    const res = await AdminProductAPI.getGroups();
+    try {
+      const res = await AdminProductAPI.getGroups();
 
-    let found;
-    let products = [];
+      let found;
+      let products = [];
 
-    setGroups(res.data);
+      setGroups(res.data);
 
-    res.data.forEach((g) => {
-      g.Products?.forEach((p) => {
-        const productWithGroup = {
-          ...p,
-          group_name: g.name,
-          group_slug: slugify(g.name),
-        };
+      res.data.forEach((g) => {
+        g.Products?.forEach((p) => {
+          const productWithGroup = {
+            ...p,
+            group_name: g.name,
+            group_slug: slugify(g.name),
+          };
 
-        products.push(productWithGroup);
+          products.push(productWithGroup);
 
-        if (String(p.id) === String(id)) {
-          found = productWithGroup;
-        }
+          if (String(p.id) === String(id)) {
+            found = productWithGroup;
+          }
+        });
       });
-    });
 
-    setAllProducts(products);
+      setAllProducts(products);
 
-    if (found) {
-      setProduct(found);
-      setPricing(found.pricing_json || {});
+      if (found) {
+        setProduct(found);
+        setPricing(found.pricing_json || {});
+      }
+
+      const d = await AdminDomainAPI.getPricing();
+      setDomains(d.data);
+    } catch (err) {
+      toast.error(err.response?.data || "Failed to load product");
     }
-
-    const d = await AdminDomainAPI.getPricing();
-    setDomains(d.data);
   };
 
   /* ================= PRICING ================= */
@@ -110,12 +114,30 @@ const AdminProductEdit = () => {
   /* ================= SAVE ================= */
 
   const save = async () => {
-    await AdminProductAPI.updateProduct(id, {
-      ...product,
-      pricing_json: pricing,
-    });
+    try {
+      const res = await AdminProductAPI.updateProduct(id, {
+        name: product.name,
+        description: product.description,
+        short_description: product.short_description,
+        whm_package_name: product.whm_package_name,
+        price: product.price,
+        pricing_json: pricing,
+        upgrades: product.upgrades,
+        free_domain_type: product.free_domain_type,
+        free_domain_tlds: product.free_domain_tlds,
+        product_group_id: product.product_group_id,
+        is_hidden: product.is_hidden,
+      });
 
-    toast.success("Saved");
+      if (res?.data && typeof res.data.updated === "number" && res.data.updated === 0) {
+        throw new Error("Save failed");
+      }
+
+      toast.success("Saved");
+      await load();
+    } catch (err) {
+      toast.error(err.response?.data || "Save failed");
+    }
   };
 
   /* ================= URL ================= */
@@ -189,7 +211,7 @@ const AdminProductEdit = () => {
             <label className="text-sm text-gray-400">Product Group</label>
 
             <select
-              value={product.group_id || ""}
+              value={product.product_group_id || ""}
               onChange={(e) => {
                 const selectedGroup = groups.find(
                   (g) => String(g.id) === e.target.value
@@ -197,7 +219,7 @@ const AdminProductEdit = () => {
 
                 setProduct({
                   ...product,
-                  group_id: e.target.value,
+                  product_group_id: e.target.value,
                   group_name: selectedGroup?.name,
                 });
               }}

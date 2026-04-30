@@ -206,6 +206,8 @@ export const DomainSearchAPI = {
     API.post("api/domain-search/transfer", data),
 };
 
+export default API;
+
 /* ===============================
    ADMIN ORDER APIs (🔥 UPDATED)
 ================================ */
@@ -281,4 +283,4 @@ export const AdminSettingsAPI = {
   updatePackagePricing: (data) =>
     API.post("api/admin/settings/package-pricing", data),
 };
-export default API;
+// export default API;

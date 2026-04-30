@@ -71,22 +71,42 @@ const CheckoutReview = () => {
             config: checkout.config,
           });
 
-    const cashfree = window.Cashfree({ mode: "sandbox" });
+    const key = res.data.razorpay_key_id;
+    const orderId = res.data.razorpay_order_id;
 
-    await cashfree.checkout({
-      paymentSessionId: res.data.payment_session_id,
-      redirectTarget: "_modal",
-    });
-
-    const verify = await PaymentAPI.verifyPayment({
-      orderId: res.data.order_id,
-    });
-
-    if (verify.data.success) {
-      window.location.href = "/checkout/success";
-    } else {
-      console.log("⚠️ Payment not completed yet");
+    if (!window.Razorpay) {
+      throw new Error("Razorpay SDK not loaded");
     }
+
+    const rzp = new window.Razorpay({
+      key,
+      order_id: orderId,
+      amount: res.data.amount,
+      currency: res.data.currency || "INR",
+      name: "Techzuno Hosting",
+      description:
+        checkout.type === "domain"
+          ? `Domain purchase (${checkout.domain})`
+          : `Hosting purchase (${checkout.domain || "Hosting"})`,
+      handler: async (response) => {
+        const verify = await PaymentAPI.verifyPayment(response);
+        if (verify.data.success) {
+          window.location.href = "/checkout/success";
+        } else {
+          console.log("⚠️ Payment not completed yet");
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          console.log("⚠️ Razorpay checkout closed");
+        },
+      },
+      theme: {
+        color: "#16a34a",
+      },
+    });
+
+    rzp.open();
 
   } catch (err) {
     console.error("❌ PAYMENT FLOW ERROR:", err);
