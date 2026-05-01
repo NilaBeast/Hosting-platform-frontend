@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/api";
+import { motion } from "framer-motion";
 
 const AdminNavbar = () => {
   const navigate = useNavigate();
@@ -25,10 +26,15 @@ const AdminNavbar = () => {
   };
 
   return (
-    <div className="bg-[#020617] border-b border-gray-800 p-4 flex justify-end items-center gap-6">
+    <motion.div
+      initial={{ y: -16, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.35 }}
+      className="glass border-b border-white/5 p-4 flex justify-end items-center gap-6 sticky top-0 z-40"
+    >
       <button
         onClick={() => navigate("/admin/settings")}
-        className="hover:text-blue-400"
+        className="hover:text-cyan-200 transition"
       >
         Settings
       </button>
@@ -50,31 +56,31 @@ const AdminNavbar = () => {
         </div>
 
         {open && (
-          <div className="absolute right-0 mt-2 w-40 bg-[#0f172a] border border-gray-700 rounded-lg shadow-lg">
+          <div className="absolute right-0 mt-2 w-44 glass rounded-xl overflow-hidden">
             <button
               onClick={() => navigate("/admin/profile")}
-              className="block w-full text-left px-4 py-2 hover:bg-[#1e293b]"
+              className="block w-full text-left px-4 py-2 hover:bg-white/5 transition"
             >
               Profile
             </button>
 
             <button
               onClick={() => navigate("/admin/settings")}
-              className="block w-full text-left px-4 py-2 hover:bg-[#1e293b]"
+              className="block w-full text-left px-4 py-2 hover:bg-white/5 transition"
             >
               Settings
             </button>
 
             <button
               onClick={logout}
-              className="block w-full text-left px-4 py-2 hover:bg-red-600"
+              className="block w-full text-left px-4 py-2 hover:bg-red-500/70 transition"
             >
               Logout
             </button>
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

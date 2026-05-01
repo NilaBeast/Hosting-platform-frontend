@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const AdminSidebar = () => {
   const { pathname } = useLocation();
@@ -6,15 +7,21 @@ const AdminSidebar = () => {
   const linkClass = (path) =>
     `block px-3 py-2 rounded-lg transition ${
       pathname === path
-        ? "bg-purple-600 text-white"
-        : "hover:bg-gray-800 hover:text-white"
+        ? "bg-gradient-to-r from-violet-600/80 to-cyan-500/60 text-white shadow-[0_18px_50px_rgba(124,58,237,0.25)]"
+        : "hover:bg-white/5 hover:text-white"
     }`;
 
   return (
-    <div className="w-64 min-h-screen bg-gradient-to-b from-[#020617] to-[#0f172a] p-6 border-r border-gray-800">
-      <h1 className="text-2xl font-bold mb-10 text-white">
+    <div className="w-64 h-screen p-4">
+      <div className="glass h-full rounded-2xl p-4 overflow-y-auto">
+      <motion.h1
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 22, mass: 0.3 }}
+        className="text-2xl font-semibold mb-10 text-white tracking-tight"
+      >
         Admin Panel
-      </h1>
+      </motion.h1>
 
       <div className="space-y-8 text-gray-300 text-sm">
 
@@ -92,6 +99,7 @@ const AdminSidebar = () => {
           </Link>
         </div>
 
+      </div>
       </div>
     </div>
   );

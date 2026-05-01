@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   Home,
   Server,
@@ -22,43 +23,51 @@ const Sidebar = () => {
      ACTIVE LINK STYLE
   ============================== */
   const linkClass = (path) =>
-    `flex items-center gap-2 p-2 rounded transition ${
+    `flex items-center gap-2 p-2 rounded-xl transition ${
       location.pathname === path
-        ? "bg-purple-600 text-white"
-        : "text-gray-300 hover:bg-gray-800"
+        ? "bg-gradient-to-r from-violet-600/80 to-cyan-500/60 text-white shadow-[0_18px_50px_rgba(124,58,237,0.25)]"
+        : "text-gray-300 hover:bg-white/5"
     }`;
 
   return (
-    <div className="w-64 bg-[#020617] h-screen p-6 flex flex-col justify-between">
+    <div className="w-64 h-screen p-4 flex flex-col justify-between">
+      <div className="glass h-full rounded-2xl p-4 flex flex-col justify-between">
 
       {/* TOP */}
       <div>
-        <h2 className="text-2xl font-bold mb-8 text-white">Dashboard</h2>
+        <motion.h2
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 22, mass: 0.3 }}
+          className="text-2xl font-semibold mb-8 text-white tracking-tight"
+        >
+          Dashboard
+        </motion.h2>
 
         <nav className="space-y-2">
 
           <Link to="/" className={linkClass("/")}>
-            <Home /> Dashboard
+            <Home className="h-4 w-4" /> Dashboard
           </Link>
 
           <Link to="/plans" className={linkClass("/plans")}>
-            <Server /> Plans
+            <Server className="h-4 w-4" /> Plans
           </Link>
 
           <Link to="/hosting" className={linkClass("/hosting")}>
-            <Server /> Hosting
+            <Server className="h-4 w-4" /> Hosting
           </Link>
 
           <Link to="/domains" className={linkClass("/domains")}>
-            <Globe /> Domains
+            <Globe className="h-4 w-4" /> Domains
           </Link>
 
           <Link to="/deploy" className={linkClass("/deploy")}>
-            <Upload /> Deploy
+            <Upload className="h-4 w-4" /> Deploy
           </Link>
 
           <Link to="/settings" className={linkClass("/settings")}>
-            <Settings /> Settings
+            <Settings className="h-4 w-4" /> Settings
           </Link>
 
           {/* 🔥 SUPPORT SECTION */}
@@ -68,12 +77,12 @@ const Sidebar = () => {
 
             {/* Create Ticket */}
             <Link to="/support" className={linkClass("/support")}>
-              <LifeBuoy /> Open Ticket
+              <LifeBuoy className="h-4 w-4" /> Open Ticket
             </Link>
 
             {/* My Tickets */}
             <Link to="/tickets" className={linkClass("/tickets")}>
-              <Ticket /> My Tickets
+              <Ticket className="h-4 w-4" /> My Tickets
             </Link>
 
           </div>
@@ -84,11 +93,12 @@ const Sidebar = () => {
       {/* LOGOUT */}
       <button
         onClick={logout}
-        className="flex items-center gap-2 mt-10 text-red-400 hover:text-red-500"
+        className="flex items-center gap-2 mt-10 text-red-300 hover:text-red-200"
       >
-        <LogOut /> Logout
+        <LogOut className="h-4 w-4" /> Logout
       </button>
 
+    </div>
     </div>
   );
 };
