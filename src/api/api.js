@@ -116,7 +116,7 @@ export const AdminProductAPI = {
   deleteProduct: (id) =>
     API.delete(`/api/admin/products/product/${id}`),
 
-  getWHMPackages: () => API.get("/api/plans"),
+  getWHMPackages: () => API.get("/api/admin/products/whm-packages"),
 
   getProductsByGroup: (groupId) =>
     API.get(`/api/admin/products/group/${groupId}/products`),

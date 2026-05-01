@@ -264,8 +264,11 @@ const AdminSettings = () => {
             >
               <option value="">Select WHM Package</option>
               {packages.map((p) => (
-                <option key={p.id} value={p.whm_package_name}>
-                  {p.name}
+                <option
+                  key={p.whm_package_name || p.name || p.id}
+                  value={p.whm_package_name || p.name || ""}
+                >
+                  {p.name || p.whm_package_name || "-"}
                 </option>
               ))}
             </select>
