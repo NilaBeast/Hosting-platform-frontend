@@ -205,6 +205,14 @@ const AdminUserDetails = () => {
     return d.toLocaleDateString();
   };
 
+  const formatPaymentMethod = (value) => {
+    const raw = value == null ? "" : String(value);
+    const v = raw.trim();
+    if (!v) return "-";
+    if (v.toLowerCase() === "cashfree") return "Razorpay";
+    return v;
+  };
+
   if (!userId) {
     return (
       <div className="text-white">
@@ -895,85 +903,16 @@ const AdminUserDetails = () => {
           .map((o) => ({
             source: "order",
             createdAt: o.createdAt,
+            orderId: o.id,
             paymentMethod: o.payment_method || o.paymentMethod || "-",
-            description: `Order #${o.id}${o.domain ? ` - ${o.domain}` : ""}`,
+            description: `Order #${o.id}`,
             paymentId: o.payment_id || null,
             amountIn: Number(o.payment_amount || o.total_price || 0),
             fees: 0,
             amountOut: 0,
           }));
 
-        const invoiceTransactions = (invoices || [])
-          .filter((inv) => Number.isFinite(Number(inv.amount)))
-          .map((inv) => ({
-            source: "invoice",
-            createdAt: inv.createdAt,
-            paymentMethod: "-",
-            description: `Invoice ${inv.invoice_number || `#${inv.id}`}`,
-            paymentId: inv.invoice_number || inv.id || null,
-            amountIn: Number(inv.amount || 0),
-            fees: 0,
-            amountOut: 0,
-            status: inv.status || null,
-          }));
-
-        const manual = (manualTransactions || []).map((t) => ({
-          ...t,
-          source: t?.source || "manual",
-        }));
-
-        const parseWhmcsInvoiceId = (value) => {
-          if (value == null) return null;
-          const str = String(value);
-          const m = str.match(/WHMCS-(\d+)/i) || str.match(/\b(\d{3,})\b/);
-          return m ? String(m[1]) : null;
-        };
-
-        const txnPriority = (t) => {
-          const src = String(t?.source || "").toLowerCase();
-          if (src === "order") return 3;
-          if (src === "invoice") return 2;
-          return 1;
-        };
-
-        const getTxnKey = (t) => {
-          const src = String(t?.source || "").toLowerCase();
-          if (src === "order") {
-            const id = t?.paymentId || t?.payment_id || null;
-            const created = t?.createdAt ? new Date(t.createdAt).toISOString() : "";
-            return `order:${id || ""}:${t?.description || ""}:${created}:${Number(t?.amountIn || 0)}`;
-          }
-
-          const invId =
-            parseWhmcsInvoiceId(t?.paymentId) ||
-            parseWhmcsInvoiceId(t?.invoiceId) ||
-            parseWhmcsInvoiceId(t?.transId) ||
-            parseWhmcsInvoiceId(t?.description);
-
-          if (invId) {
-            return `invoice:${invId}:${Number(t?.amountIn || 0)}`;
-          }
-
-          const created = t?.createdAt ? new Date(t.createdAt).toISOString() : "";
-          return `misc:${src}:${created}:${t?.description || ""}:${Number(t?.amountIn || 0)}:${Number(
-            t?.amountOut || 0
-          )}:${Number(t?.fees || 0)}`;
-        };
-
-        const byKey = new Map();
-        for (const t of [...orderTransactions, ...invoiceTransactions, ...manual]) {
-          const key = getTxnKey(t);
-          const existing = byKey.get(key);
-          if (!existing) {
-            byKey.set(key, t);
-            continue;
-          }
-          if (txnPriority(t) > txnPriority(existing)) {
-            byKey.set(key, t);
-          }
-        }
-
-        const all = Array.from(byKey.values()).sort((a, b) => {
+        const all = Array.from(orderTransactions).sort((a, b) => {
           const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return db - da;
@@ -1069,7 +1008,7 @@ const AdminUserDetails = () => {
                                   }
                                 />
                               ) : (
-                                t.paymentMethod || "-"
+                                formatPaymentMethod(t.paymentMethod)
                               )}
                             </td>
                             <td className="py-2 pr-4">

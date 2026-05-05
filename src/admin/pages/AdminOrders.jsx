@@ -8,6 +8,8 @@ import {
 } from "../../api/api";
 import toast from "react-hot-toast";
 import { useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { CreditCard, ShieldCheck } from "lucide-react";
 
 const AdminOrders = () => {
   const location = useLocation();
@@ -31,6 +33,32 @@ const AdminOrders = () => {
   const [billingCycle, setBillingCycle] = useState("");
 const [selectedProduct, setSelectedProduct] = useState(null);
 const [productPrice, setProductPrice] = useState(0);
+  const [gatewayOpen, setGatewayOpen] = useState(false);
+  const [gateway, setGateway] = useState("razorpay");
+  const [paying, setPaying] = useState(false);
+
+  const gateways = [
+    {
+      id: "razorpay",
+      title: "Razorpay",
+      subtitle: "UPI / Cards / Netbanking",
+      Icon: ShieldCheck,
+    },
+    {
+      id: "payu",
+      title: "PayU",
+      subtitle: "Cards / UPI / Wallets",
+      Icon: CreditCard,
+    },
+  ];
+
+  const formatPaymentMethod = (value) => {
+    const raw = value == null ? "" : String(value);
+    const v = raw.trim();
+    if (!v) return "-";
+    if (v.toLowerCase() === "cashfree") return "RAZORPAY";
+    return v.toUpperCase();
+  };
 
   /* ===============================
      LOAD ORDERS
@@ -112,41 +140,92 @@ const [productPrice, setProductPrice] = useState(0);
   /* ===============================
      CREATE ORDER (🔥 FIXED)
   ============================== */
-  const createOrder = async () => {
-  try {
+  const submitPayU = (actionUrl, fields) => {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = actionUrl;
+    form.style.display = "none";
+    for (const [k, v] of Object.entries(fields || {})) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = k;
+      input.value = v == null ? "" : String(v);
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  const validateForm = () => {
     if (!userId || !productId || !domain || !billingCycle) {
-      return toast.error("All fields required");
+      toast.error("All fields required");
+      return false;
     }
-
     if (domainStatus !== "available") {
-      return toast.error("Check domain availability first");
+      toast.error("Check domain availability first");
+      return false;
     }
-
-    // ✅ CALL BACKEND WITH ADMIN FLAG
-    const res = await AdminOrderAPI.createOrder({
-      user_id: userId,
-      product_id: productId,
-      domain,
-      billing_cycle: billingCycle,
-      isAdminOrder: true, // 🔥 IMPORTANT
-    });
-
-    // ❌ REMOVE CASHFREE COMPLETELY
-    // ❌ NO checkout()
-    // ❌ NO verifyPayment()
-
-    if (res.data.success) {
-      toast.success("Order created & hosting activated");
-      loadOrders();
-    } else {
-      toast.error("Order failed");
+    if (!productPrice) {
+      toast.error("Select billing cycle");
+      return false;
     }
+    return true;
+  };
 
-  } catch (err) {
-    console.error(err);
-    toast.error("Order creation failed");
-  }
-};
+  const createOrderAndPay = async (selectedGateway) => {
+    if (paying) return;
+    if (!validateForm()) return;
+    setPaying(true);
+    try {
+      const res = await PaymentAPI.createOrder({
+        productId: productId,
+        domain,
+        userId: userId,
+        gateway: selectedGateway,
+        config: {
+          currency: "INR",
+          price: productPrice,
+          cycle: billingCycle,
+        },
+      });
+
+      if (res.data?.gateway === "payu") {
+        submitPayU(res.data.actionUrl, res.data.fields);
+        return;
+      }
+
+      const key = res.data.razorpay_key_id;
+      const orderId = res.data.razorpay_order_id;
+      if (!window.Razorpay) throw new Error("Razorpay SDK not loaded");
+
+      const rzp = new window.Razorpay({
+        key,
+        order_id: orderId,
+        amount: res.data.amount,
+        currency: res.data.currency || "INR",
+        name: "Techzuno Hosting",
+        description: `Hosting purchase (${domain || "Hosting"})`,
+        handler: async (response) => {
+          const verify = await PaymentAPI.verifyPayment({
+            gateway: "razorpay",
+            ...response,
+          });
+          if (verify.data.success) {
+            window.location.href = "/checkout/success";
+          }
+        },
+        theme: { color: "#16a34a" },
+      });
+
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      toast.error("Payment order failed");
+    } finally {
+      setPaying(false);
+      setGatewayOpen(false);
+    }
+  };
 
   /* ===============================
      REGISTER DOMAIN
@@ -166,10 +245,13 @@ const [productPrice, setProductPrice] = useState(0);
     }
   };
 
-  const newOrders = orders.filter((o) => o.status === "pending");
-  const allOrders = orders.filter((o) => o.status === "active");
+  const newOrders = orders.filter(
+    (o) =>
+      String(o.status || "").toLowerCase() === "pending" ||
+      String(o.payment_status || "").toLowerCase() === "pending"
+  );
 
-  const displayOrders = isNewOrderPage ? newOrders : allOrders;
+  const displayOrders = isNewOrderPage ? newOrders : orders;
 
   const hostingOrders = displayOrders.filter((o) => o.type === "hosting");
   const domainOrders = displayOrders.filter((o) => o.type === "domain");
@@ -351,7 +433,10 @@ const [productPrice, setProductPrice] = useState(0);
             )}
 
             <button
-              onClick={createOrder}
+              onClick={() => {
+                if (!validateForm()) return;
+                setGatewayOpen(true);
+              }}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-lg"
             >
               Create Order & Pay
@@ -369,8 +454,21 @@ const [productPrice, setProductPrice] = useState(0);
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {hostingOrders.map((o) => (
           <div key={o.id} className="bg-white/5 border border-gray-700 rounded-2xl p-5">
-            <p>{o.domain}</p>
-            <p>{o.Product?.name}</p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="font-semibold">{o.domain || "-"}</div>
+              <div className="text-xs text-slate-300">
+                {formatPaymentMethod(o.payment_method || o.payment_gateway)}
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-slate-300">
+              {o.User?.email || "-"}
+            </div>
+            <div className="mt-1 text-sm">
+              {o.Plan?.name || "Hosting"}
+            </div>
+            <div className="mt-2 text-xs text-slate-300">
+              Status: {o.payment_status || o.status || "-"}
+            </div>
           </div>
         ))}
       </div>
@@ -378,6 +476,122 @@ const [productPrice, setProductPrice] = useState(0);
       {/* ===============================
           DOMAIN ORDERS (UNCHANGED)
       ============================== */}
+      <h2 className="text-2xl font-semibold mb-4 mt-10">Domain Orders</h2>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {domainOrders.map((o) => (
+          <div
+            key={o.id}
+            className="bg-white/5 border border-gray-700 rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="font-semibold">{o.domain || "-"}</div>
+              <div className="text-xs text-slate-300">
+                {formatPaymentMethod(o.payment_method || o.payment_gateway)}
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-slate-300">
+              {o.User?.email || "-"}
+            </div>
+            <div className="mt-1 text-sm">
+              Total: ₹{Number(o.total_price || 0).toFixed(2)}
+            </div>
+            <div className="mt-2 text-xs text-slate-300">
+              Status: {o.payment_status || o.status || "-"}
+            </div>
+            <div className="mt-1 text-xs text-slate-300">
+              Domain Status: {o.domain_status || "-"}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <AnimatePresence>
+        {gatewayOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-black/70"
+              onClick={() => (paying ? null : setGatewayOpen(false))}
+            />
+
+            <motion.div
+              initial={{ y: 20, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 20, opacity: 0, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 260, damping: 24, mass: 0.35 }}
+              className="relative w-full max-w-xl glass rounded-2xl p-6"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-sm text-slate-300">Select Payment Gateway</div>
+                  <div className="mt-1 text-2xl font-semibold tracking-tight">
+                    Pay ₹{Number(productPrice || 0).toFixed(2)}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-300">{domain || "-"}</div>
+                </div>
+                <button
+                  className="text-slate-300 hover:text-white transition"
+                  onClick={() => (paying ? null : setGatewayOpen(false))}
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {gateways.map(({ id, title, subtitle, Icon }) => {
+                  const active = gateway === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setGateway(id)}
+                      className={`text-left rounded-2xl p-4 transition ring-soft ${
+                        active
+                          ? "bg-gradient-to-br from-violet-600/40 to-cyan-500/20"
+                          : "bg-white/5 hover:bg-white/7"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-lg font-semibold">{title}</div>
+                          <div className="text-sm text-slate-300">{subtitle}</div>
+                        </div>
+                        <div className="glass-soft rounded-xl p-3">
+                          <Icon className="h-5 w-5 text-slate-100" />
+                        </div>
+                      </div>
+                      {active ? (
+                        <div className="mt-3 text-xs text-emerald-200">Selected</div>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 flex items-center gap-3">
+                <button
+                  disabled={paying}
+                  onClick={() => createOrderAndPay(gateway)}
+                  className="flex-1 btn-glow bg-gradient-to-r from-emerald-500 to-cyan-500 px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-60"
+                >
+                  {paying ? "Processing..." : "Proceed"}
+                </button>
+                <button
+                  disabled={paying}
+                  onClick={() => setGatewayOpen(false)}
+                  className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
